@@ -82,7 +82,7 @@ const {
   align-items: center;
   justify-content: center;
   z-index: 2000;
-  background-color: rgba($BAKANO-DARK, 0.3);
+  background-color: rgba($primary-dark, 0.3);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 }
@@ -103,12 +103,12 @@ const {
   font-family: $font-principal;
   font-weight: 700;
   font-size: 1.3rem;
-  color: $BAKANO-DARK;
+  color: $primary-dark;
   margin: 0 0 0.75rem 0;
 }
 
 .dialog-message {
-  color: rgba($BAKANO-DARK, 0.7);
+  color: rgba($primary-dark, 0.7);
   font-size: 0.95rem;
   line-height: 1.6;
   margin: 0; // Se quita el margen inferior para dar espacio a las nuevas secciones
@@ -124,7 +124,7 @@ const {
   font-size: 0.9rem;
   font-weight: 600;
   font-family: $font-principal;
-  color: $BAKANO-DARK;
+  color: $primary-dark;
   display: block;
   margin-bottom: 0.75rem;
 }
@@ -141,21 +141,21 @@ const {
 .selection-option {
   display: flex;
   align-items: center;
-  background-color: lighten($BAKANO-LIGHT, 3%);
+  background-color: lighten($primary-light, 3%);
   padding: 0.75rem;
   border-radius: 8px;
-  border: 1px solid $BAKANO-LIGHT;
+  border: 1px solid $primary-light;
   cursor: pointer;
   transition: all 0.2s ease;
 
   &:has(input:checked) {
-    border-color: $BAKANO-PURPLE;
-    background-color: $overlay-purple;
+    border-color: $accent-blue;
+    background-color: $overlay-blue;
   }
 
   input[type="radio"] {
     margin-right: 0.75rem;
-    accent-color: $BAKANO-PURPLE;
+    accent-color: $accent-blue;
     width: 1rem;
     height: 1rem;
     flex-shrink: 0;
@@ -171,13 +171,13 @@ const {
 .confirmation-input-area {
   margin: 1.5rem 0;
   padding: 1rem;
-  background-color: lighten($BAKANO-PINK, 42%);
+  background-color: lighten($secondary-beige, 20%);
   border-radius: 8px;
   text-align: center;
 
   label {
     font-size: 0.9rem;
-    color: $BAKANO-DARK;
+    color: $primary-dark;
     display: block;
     margin-bottom: 0.5rem;
     font-weight: 500;
@@ -188,7 +188,7 @@ const {
   width: 90%;
   padding: 0.75rem;
   border-radius: 6px;
-  border: 1px solid lighten($BAKANO-PINK, 25%);
+  border: 1px solid lighten($secondary-beige, 10%);
   font-size: 1rem;
   text-align: center;
   font-family: $font-secondary;
@@ -196,8 +196,8 @@ const {
 
   &:focus {
     outline: none;
-    border-color: $BAKANO-PINK;
-    box-shadow: 0 0 0 3px rgba($BAKANO-PINK, 0.2);
+    border-color: $secondary-beige;
+    box-shadow: 0 0 0 3px rgba($secondary-beige, 0.2);
   }
 }
 
@@ -205,7 +205,7 @@ const {
   font-weight: 600;
   text-align: center;
   font-size: 0.8rem;
-  color: $BAKANO-PINK;
+  color: $primary-dark;
   margin-top: 0.75rem;
   margin-bottom: 0;
 }
@@ -234,24 +234,24 @@ const {
   }
 
   &:disabled {
-    background-color: $BAKANO-LIGHT;
-    color: rgba($BAKANO-DARK, 0.4);
+    background-color: $primary-light;
+    color: rgba($primary-dark, 0.4);
     cursor: not-allowed;
   }
 }
 
 .btn-primary {
-  background-color: $BAKANO-PINK;
+  background-color: $accent-blue;
   color: $white;
 }
 
 .btn-secondary {
   background-color: transparent;
-  color: $BAKANO-DARK;
-  box-shadow: inset 0 0 0 1px $BAKANO-LIGHT;
+  color: $primary-dark;
+  box-shadow: inset 0 0 0 1px $primary-light;
 
   &:hover:not(:disabled) {
-    background-color: $BAKANO-LIGHT;
+    background-color: $primary-light;
   }
 }
 
