@@ -19,21 +19,21 @@ const showUserMenu = ref(false)
 // Países disponibles con información específica
 const availableCountries = ref([
   {
-    code: 'EC',
+    code: 'ecuador',
     name: 'Ecuador',
     key: 'ecuador',
     available: true,
     description: 'Leyes y regulaciones de Ecuador completamente configuradas'
   },
   {
-    code: 'CO',
+    code: 'colombia',
     name: 'Colombia',
     key: 'colombia',
     available: false,
     description: 'Próximamente disponible'
   },
   {
-    code: 'MX',
+    code: 'mexico',
     name: 'México',
     key: 'mexico',
     available: false,
@@ -55,19 +55,19 @@ const userInitials = computed(() => {
 })
 
 const isEcuadorSelected = computed(() => {
-  return selectedCountry.value === 'EC'
+  return selectedCountry.value === 'ecuador'
 })
 
 const canProceed = computed(() => {
-  return selectedCountry.value === 'EC'
+  return selectedCountry.value === 'ecuador'
 })
 
 // Métodos
 const handleCountrySelect = (countryCode: string, available: boolean) => {
   if (!available) {
-    if (countryCode === 'CO') {
+    if (countryCode === 'colombia') {
       triggerToast('Colombia estará disponible próximamente. Por ahora, este MVP funciona solo con Ecuador.', 'info')
-    } else if (countryCode === 'MX') {
+    } else if (countryCode === 'mexico') {
       triggerToast('México estará disponible próximamente. Colocaremos más leyes para considerar que este MVP funciona solo con Ecuador.', 'info')
     }
     return
@@ -121,7 +121,13 @@ onMounted(async () => {
     
     // Si ya tiene país configurado, pre-seleccionarlo
     if (workspaceStore.selectedCountry?.code) {
-      selectedCountry.value = workspaceStore.selectedCountry.code
+      // Mapear códigos ISO a códigos del backend si es necesario
+      const countryMapping: Record<string, string> = {
+        'EC': 'ecuador',
+        'CO': 'colombia',
+        'MX': 'mexico'
+      }
+      selectedCountry.value = countryMapping[workspaceStore.selectedCountry.code] || workspaceStore.selectedCountry.code
     }
   } catch (error) {
     console.error('Error inicializando workspace:', error)
