@@ -4,6 +4,8 @@ import LoginView from '../views/LoginView.vue'
 import RegisterView from '../views/RegisterView.vue'
 import VerifyView from '../views/VerifyView.vue'
 import WorkspaceSetupView from '../views/WorkspaceSetupView.vue'
+import { useAuthStore } from '@/stores/auth'
+import { useWorkspaceStore } from '@/stores/workspace'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -37,13 +39,70 @@ const router = createRouter({
       path: '/workspace-setup',
       name: 'workspace-setup',
       component: WorkspaceSetupView,
+      meta: { requiresAuth: true }
     },
     {
       path: '/dashboard',
       name: 'dashboard',
       component: () => import('../views/HomeView.vue'), // Temporal, usar HomeView como dashboard
+      meta: { requiresAuth: true, requiresWorkspaceSetup: true }
     },
   ],
+})
+
+// Guard de navegación para verificar autenticación y configuración del workspace
+router.beforeEach(async (to, from, next) => {
+  const authStore = useAuthStore()
+  const workspaceStore = useWorkspaceStore()
+
+  // Inicializar auth si no está inicializado
+  if (!authStore.isInitialized) {
+    await authStore.initializeAuth()
+  }
+
+  // Rutas que no requieren autenticación
+  const publicRoutes = ['home', 'login', 'register', 'verify', 'verify-email']
+  const isPublicRoute = publicRoutes.includes(to.name as string)
+
+  // Si la ruta requiere autenticación y el usuario no está autenticado
+  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+    return next({ name: 'login' })
+  }
+
+  // Si el usuario está autenticado
+  if (authStore.isAuthenticated) {
+    // Inicializar workspace si no está inicializado
+    if (!workspaceStore.isInitialized) {
+      try {
+        await workspaceStore.initializeWorkspace()
+      } catch (error) {
+        console.error('Error inicializando workspace:', error)
+        // Si hay error al cargar workspace, continuar a workspace-setup
+      }
+    }
+
+    // Si la ruta requiere workspace configurado y no lo está
+    if (to.meta.requiresWorkspaceSetup && !workspaceStore.isWorkspaceConfigured) {
+      // Si no está en workspace-setup, redirigir allí
+      if (to.name !== 'workspace-setup') {
+        return next({ name: 'workspace-setup' })
+      }
+    }
+
+    // Si está en una ruta pública pero ya está autenticado
+    if (isPublicRoute) {
+      // Si el workspace está configurado, ir al dashboard
+      if (workspaceStore.isWorkspaceConfigured) {
+        return next({ name: 'dashboard' })
+      } else {
+        // Si no está configurado, ir a workspace-setup
+        return next({ name: 'workspace-setup' })
+      }
+    }
+  }
+
+  // Continuar con la navegación normal
+  next()
 })
 
 export default router
