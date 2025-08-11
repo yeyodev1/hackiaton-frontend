@@ -14,7 +14,11 @@ export default defineConfig({
   },
   css: {
     preprocessorOptions: {
-      scss: {},
+      scss: {
+        additionalData:
+          `@use "@/styles/colorVariables.module.scss" as *;` +
+          `@use "@/styles/fonts.modules.scss" as *;`,
+      },
     },
   },
 })
