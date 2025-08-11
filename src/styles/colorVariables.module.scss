@@ -1,10 +1,14 @@
-$BAKANO-PINK: #e6285c;
-$BAKANO-DARK: #191423;
-$BAKANO-LIGHT: #f5f3ef;
-$BAKANO-PURPLE: #85529c;
+// Paleta de colores para proyecto de agente legal
+$primary-dark: #50514f;      // Gris oscuro profesional
+$primary-light: #cbd4c2;     // Verde gris claro
+$background-white: #fffcff;  // Blanco puro
+$accent-blue: #247ba0;       // Azul corporativo
+$secondary-beige: #c3b299;   // Beige cálido
 
+// Colores base
 $white: #ffffff;
 $text-light: #f5f5f5;
-$overlay-purple: rgba($BAKANO-PURPLE, 0.1);
 
-$BAKANO-GREEN: #3bb77e;
+// Overlays y transparencias
+$overlay-dark: rgba($primary-dark, 0.1);
+$overlay-blue: rgba($accent-blue, 0.1);
