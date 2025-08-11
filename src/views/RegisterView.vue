@@ -1,12 +1,16 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { reactive, computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import authService from '@/services/auth.service'
+import { useAuthStore } from '@/stores/auth'
 import { useToast } from '@/composables/useToast'
 import type { RegisterData } from '@/services/auth.service'
 
 const router = useRouter()
+const authStore = useAuthStore()
 const { triggerToast } = useToast()
+
+// Estado local para errores de validación
+const validationErrors = ref<string[]>([])
 
 // Estado del formulario
 const formData = reactive<RegisterData>({
@@ -17,8 +21,8 @@ const formData = reactive<RegisterData>({
   country: ''
 })
 
-// Estados de UI
-const isLoading = ref(false)
+// Computed properties del store
+const isLoading = computed(() => authStore.isLoading)
 
 // Lista de países para el select
 const countries = [
@@ -30,34 +34,39 @@ const countries = [
 
 // Validaciones
 const validateForm = (): boolean => {
+  const errors: string[] = []
+  
   if (!formData.name.trim()) {
-    triggerToast('El nombre es requerido', 'error')
-    return false
+    errors.push('El nombre completo es requerido')
   }
   
   if (!formData.email.trim()) {
-    triggerToast('El email es requerido', 'error')
-    return false
+    errors.push('El correo electrónico es requerido')
+  } else {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(formData.email)) {
+      errors.push('El formato del correo electrónico no es válido')
+    }
   }
   
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  if (!emailRegex.test(formData.email)) {
-    triggerToast('Formato de email inválido', 'error')
-    return false
-  }
-  
-  if (formData.password.length < 6) {
-    triggerToast('La contraseña debe tener al menos 6 caracteres', 'error')
-    return false
+  if (!formData.password) {
+    errors.push('La contraseña es requerida')
+  } else if (formData.password.length < 6) {
+    errors.push('La contraseña debe tener al menos 6 caracteres')
   }
   
   if (!formData.companyName.trim()) {
-    triggerToast('El nombre de la empresa es requerido', 'error')
-    return false
+    errors.push('El nombre de la empresa es requerido')
   }
   
   if (!formData.country) {
-    triggerToast('Selecciona un país', 'error')
+    errors.push('Debes seleccionar un país')
+  }
+  
+  validationErrors.value = errors
+  
+  if (errors.length > 0) {
+    triggerToast(errors[0], 'error')
     return false
   }
   
@@ -66,26 +75,19 @@ const validateForm = (): boolean => {
 
 // Manejo del envío del formulario
 const handleSubmit = async () => {
+  // Limpiar errores previos
+  validationErrors.value = []
+  
   if (!validateForm()) {
     return
   }
   
-  isLoading.value = true
-  
   try {
-    const response = await authService.register(formData)
-    
-    if (response.success) {
-      triggerToast('¡Cuenta creada exitosamente! Redirigiendo...', 'success')
-      // Redirigir al home después de un registro exitoso
-      setTimeout(() => {
-        router.push('/')
-      }, 2000)
-    }
+    await authStore.register(formData)
+    // El store maneja la redirección automáticamente
   } catch (error: any) {
-    triggerToast(error.message || 'Error al registrar usuario', 'error')
-  } finally {
-    isLoading.value = false
+    // El store maneja los errores y toasts automáticamente
+    console.error('Error en registro:', error)
   }
 }
 
