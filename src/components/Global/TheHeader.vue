@@ -28,8 +28,8 @@
       </nav>
       
       <div class="header__actions">
-        <button class="header__btn header__btn--secondary">Iniciar Sesión</button>
-        <button class="header__btn header__btn--primary">Registrarse</button>
+        <router-link to="/login" class="header__btn header__btn--secondary">Iniciar Sesión</router-link>
+        <router-link to="/register" class="header__btn header__btn--primary">Registrarse</router-link>
       </div>
     </div>
   </header>
@@ -154,6 +154,8 @@
     border-radius: 4px;
     cursor: pointer;
     transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-block;
     
     @media (max-width: 768px) {
       padding: 0.4rem 0.75rem;
