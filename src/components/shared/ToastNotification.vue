@@ -51,7 +51,7 @@ const toastIcon = computed(() => {
 }
 
 .toast--success {
-  background-color: rgba($BAKANO-GREEN, 0.9);
+  background-color: rgba($accent-blue, 0.9);
 
   i {
     color: $white;
@@ -59,7 +59,7 @@ const toastIcon = computed(() => {
 }
 
 .toast--error {
-  background-color: rgba($BAKANO-PINK, 0.9);
+  background-color: rgba($primary-dark, 0.9);
 
   i {
     color: $white;
@@ -67,7 +67,7 @@ const toastIcon = computed(() => {
 }
 
 .toast--info {
-  background-color: rgba($BAKANO-PURPLE, 0.9);
+  background-color: rgba($secondary-beige, 0.9);
 
   i {
     color: $white;
