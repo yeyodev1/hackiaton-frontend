@@ -152,7 +152,7 @@ export interface UploadDocumentRequest {
  * subida de documentos y completado de setup
  */
 class WorkspaceService extends APIBase {
-  private readonly baseEndpoint = '/workspace'
+  private readonly baseEndpoint = 'workspace'
 
   /**
    * Obtiene el workspace del usuario autenticado
@@ -160,14 +160,12 @@ class WorkspaceService extends APIBase {
    */
   async getUserWorkspace(): Promise<GetWorkspaceResponse> {
     try {
-      const response: AxiosResponse<GetWorkspaceResponse> = await this.get(
-        `${this.baseEndpoint}`
-      )
+      const response: AxiosResponse<GetWorkspaceResponse> = await this.get(`${this.baseEndpoint}/my-workspace`)
       return response.data
     } catch (error: any) {
       throw {
         status: error.status || 500,
-        message: error.message || 'Error al obtener el workspace'
+        message: error.message || 'Error al obtener el workspace',
       }
     }
   }
@@ -180,16 +178,16 @@ class WorkspaceService extends APIBase {
   async updateWorkspaceCountry(country: string): Promise<UpdateCountryResponse> {
     try {
       const requestData: UpdateCountryRequest = { country }
-      
+
       const response: AxiosResponse<UpdateCountryResponse> = await this.put(
         `${this.baseEndpoint}/country`,
-        requestData
+        requestData,
       )
       return response.data
     } catch (error: any) {
       throw {
         status: error.status || 500,
-        message: error.message || 'Error al actualizar el país del workspace'
+        message: error.message || 'Error al actualizar el país del workspace',
       }
     }
   }
@@ -200,20 +198,17 @@ class WorkspaceService extends APIBase {
    * @param documentType - Tipo de documento (opcional)
    * @returns Promise con la información del documento subido
    */
-  async uploadCompanyDocument(
-    file: File, 
-    documentType?: string
-  ): Promise<UploadDocumentResponse> {
+  async uploadCompanyDocument(file: File, documentType?: string): Promise<UploadDocumentResponse> {
     try {
       const response: AxiosResponse<UploadDocumentResponse> = await this.uploadFile(
         `${this.baseEndpoint}/upload-document`,
-        file
+        file,
       )
       return response.data
     } catch (error: any) {
       throw {
         status: error.status || 500,
-        message: error.message || 'Error al subir el documento'
+        message: error.message || 'Error al subir el documento',
       }
     }
   }
@@ -224,15 +219,15 @@ class WorkspaceService extends APIBase {
    */
   async completeWorkspaceSetup(): Promise<CompleteSetupResponse> {
     try {
-      const response: AxiosResponse<CompleteSetupResponse> = await this.post(
+      const response: AxiosResponse<CompleteSetupResponse> = await this.put(
         `${this.baseEndpoint}/complete-setup`,
-        {}
+        {},
       )
       return response.data
     } catch (error: any) {
       throw {
         status: error.status || 500,
-        message: error.message || 'Error al completar la configuración del workspace'
+        message: error.message || 'Error al completar la configuración del workspace',
       }
     }
   }
@@ -243,18 +238,18 @@ class WorkspaceService extends APIBase {
    * @returns Promise con el workspace actualizado
    */
   async updateWorkspaceSettings(
-    settings: Partial<WorkspaceSettings>
+    settings: Partial<WorkspaceSettings>,
   ): Promise<UpdateCountryResponse> {
     try {
       const response: AxiosResponse<UpdateCountryResponse> = await this.patch(
         `${this.baseEndpoint}/settings`,
-        { settings }
+        { settings },
       )
       return response.data
     } catch (error: any) {
       throw {
         status: error.status || 500,
-        message: error.message || 'Error al actualizar la configuración del workspace'
+        message: error.message || 'Error al actualizar la configuración del workspace',
       }
     }
   }
@@ -265,18 +260,18 @@ class WorkspaceService extends APIBase {
    * @returns Promise con el workspace actualizado
    */
   async updateWorkspaceData(
-    data: Partial<Pick<Workspace, 'name' | 'status'>>
+    data: Partial<Pick<Workspace, 'name' | 'status'>>,
   ): Promise<UpdateCountryResponse> {
     try {
       const response: AxiosResponse<UpdateCountryResponse> = await this.patch(
         `${this.baseEndpoint}`,
-        data
+        data,
       )
       return response.data
     } catch (error: any) {
       throw {
         status: error.status || 500,
-        message: error.message || 'Error al actualizar los datos del workspace'
+        message: error.message || 'Error al actualizar los datos del workspace',
       }
     }
   }
@@ -288,13 +283,13 @@ class WorkspaceService extends APIBase {
   async getAvailableCountries(): Promise<Country[]> {
     try {
       const response: AxiosResponse<{ countries: Country[] }> = await this.get(
-        `${this.baseEndpoint}/countries`
+        `${this.baseEndpoint}/countries`,
       )
       return response.data.countries
     } catch (error: any) {
       throw {
         status: error.status || 500,
-        message: error.message || 'Error al obtener los países disponibles'
+        message: error.message || 'Error al obtener los países disponibles',
       }
     }
   }
@@ -306,13 +301,13 @@ class WorkspaceService extends APIBase {
   async getSetupProgress(): Promise<{ progress: number; nextStep?: string }> {
     try {
       const response: AxiosResponse<{ progress: number; nextStep?: string }> = await this.get(
-        `${this.baseEndpoint}/setup-progress`
+        `${this.baseEndpoint}/setup-progress`,
       )
       return response.data
     } catch (error: any) {
       throw {
         status: error.status || 500,
-        message: error.message || 'Error al obtener el progreso de configuración'
+        message: error.message || 'Error al obtener el progreso de configuración',
       }
     }
   }
@@ -336,7 +331,7 @@ class WorkspaceService extends APIBase {
     } catch (error: any) {
       throw {
         status: error.status || 500,
-        message: error.message || 'Error al validar la configuración del workspace'
+        message: error.message || 'Error al validar la configuración del workspace',
       }
     }
   }
