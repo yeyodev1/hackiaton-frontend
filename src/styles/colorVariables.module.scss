@@ -9,6 +9,11 @@ $secondary-beige: #c3b299;   // Beige cálido
 $white: #ffffff;
 $text-light: #f5f5f5;
 
+// Colores de estado
+$success-green: #10b981;     // Verde para éxito
+$warning-yellow: #f59e0b;    // Amarillo para advertencias
+$error-red: #ef4444;         // Rojo para errores
+
 // Overlays y transparencias
 $overlay-dark: rgba($primary-dark, 0.1);
 $overlay-blue: rgba($accent-blue, 0.1);
