@@ -1,6 +1,6 @@
 import { ref, readonly } from 'vue'
 
-type ToastType = 'success' | 'error' | 'info'
+type ToastType = 'success' | 'error' | 'info' | 'warning'
 
 const isVisible = ref(false)
 const message = ref('')
