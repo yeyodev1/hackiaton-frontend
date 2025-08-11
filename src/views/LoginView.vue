@@ -2,9 +2,11 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import authService from '@/services/auth.service'
+import { useToast } from '@/composables/useToast'
 import type { LoginData } from '@/services/auth.service'
 
 const router = useRouter()
+const { triggerToast } = useToast()
 
 // Estado del formulario
 const formData = reactive<LoginData>({
@@ -14,25 +16,23 @@ const formData = reactive<LoginData>({
 
 // Estados de UI
 const isLoading = ref(false)
-const errorMessage = ref('')
-const successMessage = ref('')
 const showPassword = ref(false)
 
 // Validaciones
 const validateForm = (): boolean => {
   if (!formData.email.trim()) {
-    errorMessage.value = 'El email es requerido'
+    triggerToast('El email es requerido', 'error')
     return false
   }
   
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   if (!emailRegex.test(formData.email)) {
-    errorMessage.value = 'Formato de email inválido'
+    triggerToast('Formato de email inválido', 'error')
     return false
   }
   
   if (!formData.password) {
-    errorMessage.value = 'La contraseña es requerida'
+    triggerToast('La contraseña es requerida', 'error')
     return false
   }
   
@@ -41,9 +41,6 @@ const validateForm = (): boolean => {
 
 // Manejo del envío del formulario
 const handleSubmit = async () => {
-  errorMessage.value = ''
-  successMessage.value = ''
-  
   if (!validateForm()) {
     return
   }
@@ -54,14 +51,14 @@ const handleSubmit = async () => {
     const response = await authService.login(formData)
     
     if (response.success) {
-      successMessage.value = 'Inicio de sesión exitoso'
+      triggerToast('¡Inicio de sesión exitoso! Redirigiendo...', 'success')
       // Redirigir al home después de un login exitoso
       setTimeout(() => {
         router.push('/')
       }, 1500)
     }
   } catch (error: any) {
-    errorMessage.value = error.message || 'Error al iniciar sesión'
+    triggerToast(error.message || 'Error al iniciar sesión', 'error')
   } finally {
     isLoading.value = false
   }
@@ -132,15 +129,6 @@ const togglePassword = () => {
               </svg>
             </button>
           </div>
-        </div>
-
-        <!-- Mensajes -->
-        <div v-if="errorMessage" class="error-message">
-          {{ errorMessage }}
-        </div>
-        
-        <div v-if="successMessage" class="success-message">
-          {{ successMessage }}
         </div>
 
         <!-- Botón de envío -->
