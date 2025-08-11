@@ -64,22 +64,22 @@ class AuthService extends APIBase {
     try {
       const response: AxiosResponse<AuthResponse> = await this.post<AuthResponse>(
         'auth/register',
-        userData
+        userData,
       )
-      
+
       // Guardar token en localStorage si el registro es exitoso
       if (response.data.success && response.data.data.token) {
         localStorage.setItem('access_token', response.data.data.token)
         localStorage.setItem('user', JSON.stringify(response.data.data.user))
       }
-      
+
       return response.data
     } catch (error: any) {
       console.error('Error en registro:', error)
       throw {
         success: false,
         message: error.message || 'Error al registrar usuario',
-        status: error.status || 500
+        status: error.status || 500,
       }
     }
   }
@@ -91,22 +91,22 @@ class AuthService extends APIBase {
     try {
       const response: AxiosResponse<LoginResponse> = await this.post<LoginResponse>(
         'auth/login',
-        credentials
+        credentials,
       )
-      
+
       // Guardar token en localStorage si el login es exitoso
       if (response.data.success && response.data.data.token) {
         localStorage.setItem('access_token', response.data.data.token)
         localStorage.setItem('user', JSON.stringify(response.data.data.user))
       }
-      
+
       return response.data
     } catch (error: any) {
       console.error('Error en login:', error)
       throw {
         success: false,
         message: error.message || 'Error al iniciar sesión',
-        status: error.status || 500
+        status: error.status || 500,
       }
     }
   }
@@ -148,6 +148,21 @@ class AuthService extends APIBase {
    */
   getToken(): string | null {
     return localStorage.getItem('access_token')
+  }
+
+  /**
+   * Verifica el email del usuario
+   */
+  async verifyEmail(token: string): Promise<{ success: boolean; message?: string }> {
+    try {
+      const response = await this.get<{ success: boolean; message?: string }>(
+        `auth/verify-email/${token}`,
+      )
+      return response.data
+    } catch (error) {
+      console.error('Email verification failed:', error)
+      return { success: false, message: 'Error al verificar el email' }
+    }
   }
 
   /**
