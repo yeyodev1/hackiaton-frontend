@@ -2,9 +2,11 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import authService from '@/services/auth.service'
+import { useToast } from '@/composables/useToast'
 import type { RegisterData } from '@/services/auth.service'
 
 const router = useRouter()
+const { triggerToast } = useToast()
 
 // Estado del formulario
 const formData = reactive<RegisterData>({
@@ -17,8 +19,6 @@ const formData = reactive<RegisterData>({
 
 // Estados de UI
 const isLoading = ref(false)
-const errorMessage = ref('')
-const successMessage = ref('')
 
 // Lista de países para el select
 const countries = [
@@ -31,33 +31,33 @@ const countries = [
 // Validaciones
 const validateForm = (): boolean => {
   if (!formData.name.trim()) {
-    errorMessage.value = 'El nombre es requerido'
+    triggerToast('El nombre es requerido', 'error')
     return false
   }
   
   if (!formData.email.trim()) {
-    errorMessage.value = 'El email es requerido'
+    triggerToast('El email es requerido', 'error')
     return false
   }
   
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   if (!emailRegex.test(formData.email)) {
-    errorMessage.value = 'Formato de email inválido'
+    triggerToast('Formato de email inválido', 'error')
     return false
   }
   
   if (formData.password.length < 6) {
-    errorMessage.value = 'La contraseña debe tener al menos 6 caracteres'
+    triggerToast('La contraseña debe tener al menos 6 caracteres', 'error')
     return false
   }
   
   if (!formData.companyName.trim()) {
-    errorMessage.value = 'El nombre de la empresa es requerido'
+    triggerToast('El nombre de la empresa es requerido', 'error')
     return false
   }
   
   if (!formData.country) {
-    errorMessage.value = 'Selecciona un país'
+    triggerToast('Selecciona un país', 'error')
     return false
   }
   
@@ -66,9 +66,6 @@ const validateForm = (): boolean => {
 
 // Manejo del envío del formulario
 const handleSubmit = async () => {
-  errorMessage.value = ''
-  successMessage.value = ''
-  
   if (!validateForm()) {
     return
   }
@@ -79,14 +76,14 @@ const handleSubmit = async () => {
     const response = await authService.register(formData)
     
     if (response.success) {
-      successMessage.value = response.message
+      triggerToast('¡Cuenta creada exitosamente! Redirigiendo...', 'success')
       // Redirigir al home después de un registro exitoso
       setTimeout(() => {
         router.push('/')
       }, 2000)
     }
   } catch (error: any) {
-    errorMessage.value = error.message || 'Error al registrar usuario'
+    triggerToast(error.message || 'Error al registrar usuario', 'error')
   } finally {
     isLoading.value = false
   }
@@ -177,15 +174,6 @@ const goToLogin = () => {
               {{ country }}
             </option>
           </select>
-        </div>
-
-        <!-- Mensajes -->
-        <div v-if="errorMessage" class="error-message">
-          {{ errorMessage }}
-        </div>
-        
-        <div v-if="successMessage" class="success-message">
-          {{ successMessage }}
         </div>
 
         <!-- Botón de envío -->
