@@ -1,12 +1,16 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import authService from '@/services/auth.service'
+import { useAuthStore } from '@/stores/auth'
 import { useToast } from '@/composables/useToast'
 import type { LoginData } from '@/services/auth.service'
 
 const router = useRouter()
+const authStore = useAuthStore()
 const { triggerToast } = useToast()
+
+// Estado local para errores de validación
+const validationErrors = ref<string[]>([])
 
 // Estado del formulario
 const formData = reactive<LoginData>({
@@ -15,24 +19,32 @@ const formData = reactive<LoginData>({
 })
 
 // Estados de UI
-const isLoading = ref(false)
 const showPassword = ref(false)
+
+// Computed properties del store
+const isLoading = computed(() => authStore.isLoading)
 
 // Validaciones
 const validateForm = (): boolean => {
-  if (!formData.email.trim()) {
-    triggerToast('El email es requerido', 'error')
-    return false
-  }
+  const errors: string[] = []
   
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  if (!emailRegex.test(formData.email)) {
-    triggerToast('Formato de email inválido', 'error')
-    return false
+  if (!formData.email.trim()) {
+    errors.push('El correo electrónico es requerido')
+  } else {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(formData.email)) {
+      errors.push('El formato del correo electrónico no es válido')
+    }
   }
   
   if (!formData.password) {
-    triggerToast('La contraseña es requerida', 'error')
+    errors.push('La contraseña es requerida')
+  }
+  
+  validationErrors.value = errors
+  
+  if (errors.length > 0) {
+    triggerToast(errors[0], 'error')
     return false
   }
   
@@ -41,26 +53,19 @@ const validateForm = (): boolean => {
 
 // Manejo del envío del formulario
 const handleSubmit = async () => {
+  // Limpiar errores previos
+  validationErrors.value = []
+  
   if (!validateForm()) {
     return
   }
   
-  isLoading.value = true
-  
   try {
-    const response = await authService.login(formData)
-    
-    if (response.success) {
-      triggerToast('¡Inicio de sesión exitoso! Redirigiendo...', 'success')
-      // Redirigir al home después de un login exitoso
-      setTimeout(() => {
-        router.push('/')
-      }, 1500)
-    }
+    await authStore.login(formData)
+    // El store maneja la redirección automáticamente
   } catch (error: any) {
-    triggerToast(error.message || 'Error al iniciar sesión', 'error')
-  } finally {
-    isLoading.value = false
+    // El store maneja los errores y toasts automáticamente
+    console.error('Error en login:', error)
   }
 }
 
