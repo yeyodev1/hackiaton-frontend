@@ -27,6 +27,16 @@ const router = createRouter({
       name: 'verify',
       component: VerifyView,
     },
+    {
+      path: '/verify-email',
+      name: 'verify-email',
+      component: VerifyView,
+    },
+    {
+      path: '/dashboard',
+      name: 'dashboard',
+      component: () => import('../views/HomeView.vue'), // Temporal, usar HomeView como dashboard
+    },
   ],
 })
 
