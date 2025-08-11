@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import TheHeader from '@/components/Global/TheHeader.vue'
 import TheFooter from '@/components/Global/TheFooter.vue'
+import ToastNotification from '@/components/shared/ToastNotification.vue'
+import ConfirmationDialog from '@/components/shared/ConfirmationDialog.vue'
 </script>
 
 <template>
@@ -12,6 +14,10 @@ import TheFooter from '@/components/Global/TheFooter.vue'
     </main>
     
     <TheFooter />
+    
+    <!-- Componentes globales -->
+    <ToastNotification />
+    <ConfirmationDialog />
   </div>
 </template>
 
