@@ -141,12 +141,9 @@ export const useAuthStore = defineStore('auth', () => {
 
         triggerToast(`¡Bienvenido ${response.data.user.name}!`, 'success')
 
-        // Redirigir según el estado del usuario
-        if (!response.data.user.isVerified) {
-          await router.push('/verify-email')
-        } else {
-          await router.push('/dashboard')
-        }
+        // Redirigir al dashboard independientemente del estado de verificación
+        // Nota: Permitimos acceso sin verificación de email
+        await router.push('/dashboard')
       } else {
         throw new Error(response.message || 'Error en el login')
       }
@@ -263,6 +260,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   /**
    * Verifica si el usuario puede acceder a una ruta específica
+   * Nota: Permitimos acceso sin verificación de email
    */
   const canAccessRoute = (routeName: string): boolean => {
     const publicRoutes = ['login', 'register', 'verify', 'forgot-password']
@@ -271,10 +269,8 @@ export const useAuthStore = defineStore('auth', () => {
       return publicRoutes.includes(routeName)
     }
 
-    if (!isEmailVerified.value) {
-      return ['verify-email', 'logout'].includes(routeName)
-    }
-
+    // Permitir acceso a todas las rutas para usuarios autenticados
+    // independientemente del estado de verificación de email
     return true
   }
 
