@@ -144,10 +144,10 @@ export const useAgentStore = defineStore('agent', () => {
 
       // Crear mensaje de respuesta
       const assistantMessage: ChatMessage = {
-        id: response.id,
+        id: response.id!,
         role: 'assistant',
-        content: response.message,
-        timestamp: new Date(response.timestamp)
+        content: response.message!,
+        timestamp: new Date(response.timestamp!)
       }
 
       // Agregar respuesta a la conversación
@@ -197,12 +197,12 @@ export const useAgentStore = defineStore('agent', () => {
         const request = agentService.formatMessage(message, conversationId)
         const response = await agentService.chatWithDocument(analysisId, request)
 
-        // Crear mensaje de respuesta
+        // Crear mensaje de respuesta - manejar tanto la estructura antigua como la nueva
         const assistantMessage: ChatMessage = {
-          id: response.id,
+          id: response.id || `msg_${Date.now()}_assistant`,
           role: 'assistant',
-          content: response.message,
-          timestamp: new Date(response.timestamp),
+          content: response.message || response.content || 'Respuesta recibida',
+          timestamp: new Date(response.timestamp || new Date().toISOString()),
           analysisId
         }
 
