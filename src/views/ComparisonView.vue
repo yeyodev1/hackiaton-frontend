@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAnalysisStore } from '@/stores/analysis'
 import { useDocumentStore } from '@/stores/document'
+import { useWorkspaceStore } from '@/stores/workspace'
 import { useToast } from '@/composables/useToast'
 import type { IDocumentAnalysis } from '@/types/analysis.types'
 
@@ -10,6 +11,7 @@ const route = useRoute()
 const router = useRouter()
 const analysisStore = useAnalysisStore()
 const documentStore = useDocumentStore()
+const workspaceStore = useWorkspaceStore()
 const { triggerToast } = useToast()
 
 // Estado local
@@ -87,8 +89,8 @@ const createComparison = async () => {
   
   try {
     const success = await analysisStore.compareDocuments({
-      documentIds: selectedDocuments.value,
-      title: comparisonTitle.value || 'Comparación sin título'
+      workspaceId: workspaceStore.workspace?._id || '',
+      documentIds: selectedDocuments.value
     })
 
     if (success) {
@@ -129,8 +131,8 @@ const formatDate = (date: Date | string): string => {
 }
 
 // Formatear tamaño de archivo
-const formatFileSize = (bytes: number): string => {
-  if (bytes === 0) return '0 Bytes'
+const formatFileSize = (bytes: number | undefined): string => {
+  if (!bytes || bytes === 0) return '0 Bytes'
   const k = 1024
   const sizes = ['Bytes', 'KB', 'MB', 'GB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
@@ -221,16 +223,16 @@ onMounted(() => {
                 <div class="document-header">
                   <span class="document-type">{{ document.type }}</span>
                   <span class="document-status" :class="document.status">
-                    {{ document.status === 'processed' ? 'Procesado' : 'Pendiente' }}
+                    {{ document.status === 'completed' ? 'Procesado' : 'Pendiente' }}
                   </span>
                 </div>
                 <h4 class="document-name">{{ document.name }}</h4>
                 <div class="document-meta">
                   <span class="meta-item">
-                    📅 {{ formatDate(document.uploadDate) }}
+                    📅 {{ formatDate(document.uploadedAt) }}
                   </span>
                   <span class="meta-item">
-                    📄 {{ document.pages || 0 }} páginas
+                    📄 {{ document.metadata?.pages || 0 }} páginas
                   </span>
                   <span class="meta-item">
                     💾 {{ formatFileSize(document.size) }}
