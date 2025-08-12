@@ -389,9 +389,7 @@ onMounted(async () => {
             </div>
             
             <div class="document-meta">
-              <span class="meta-item">
-                📏 {{ formatFileSize(document.size!) }}
-              </span>
+
               <span class="meta-item">
                 📅 {{ formatDate(document.uploadedAt) }}
               </span>
@@ -409,12 +407,15 @@ onMounted(async () => {
             >
               ⬇️ Descargar
             </button>
-            <button 
+            <a 
+              :href="document.url"
+              target="_blank"
               class="action-btn secondary"
-              @click="triggerToast('Vista de detalle en desarrollo', 'info')"
+              :class="{ disabled: !document.url || document.status !== 'completed' }"
+              @click="!document.url || document.status !== 'completed' ? $event.preventDefault() : null"
             >
               👁️ Ver
-            </button>
+            </a>
             <button 
               class="action-btn danger"
               @click="confirmDelete(document)"
@@ -1085,6 +1086,18 @@ onMounted(async () => {
 
         &:hover {
           background: $gray-200;
+        }
+
+        &.disabled {
+          background: #f5f5f5;
+          color: #999;
+          cursor: not-allowed;
+          pointer-events: none;
+          
+          &:hover {
+            background: #f5f5f5;
+            transform: none;
+          }
         }
       }
 
