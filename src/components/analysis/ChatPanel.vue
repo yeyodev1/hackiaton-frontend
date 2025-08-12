@@ -4,7 +4,7 @@ import { useAgentStore } from '@/stores/agent'
 import type { Conversation } from '@/stores/agent'
 
 interface Props {
-  analysisId: string
+  analysisId: string | null
   documentName?: string
   isVisible: boolean
 }
@@ -28,12 +28,12 @@ const canSendMessage = computed(() =>
 )
 
 const conversationsForAnalysis = computed(() =>
-  agentStore.getConversationsForAnalysis(props.analysisId)
+  props.analysisId ? agentStore.getConversationsForAnalysis(props.analysisId) : []
 )
 
 // Métodos
 const initializeChat = async () => {
-  if (isInitialized.value) return
+  if (isInitialized.value || !props.analysisId) return
 
   await agentStore.initializeStore()
 
@@ -53,20 +53,24 @@ const initializeChat = async () => {
 }
 
 const sendMessage = async () => {
-  if (!canSendMessage.value || !currentConversation.value) return
+  if (!canSendMessage.value || !currentConversation.value || !props.analysisId) return
 
   const message = messageInput.value.trim()
   messageInput.value = ''
 
-  await agentStore.sendMessageToDocument(
-    message,
-    props.analysisId,
-    currentConversation.value.id
-  )
+  try {
+    await agentStore.sendMessageToDocument(
+      message,
+      props.analysisId,
+      currentConversation.value.id
+    )
 
-  // Scroll al final después de enviar
-  await nextTick()
-  scrollToBottom()
+    // Scroll al final después de enviar
+    await nextTick()
+    scrollToBottom()
+  } catch (error) {
+    console.error('Error sending message:', error)
+  }
 }
 
 const handleKeyPress = (event: KeyboardEvent) => {
@@ -94,6 +98,17 @@ const clearError = () => {
 }
 
 // Watchers
+watch(
+  () => props.analysisId,
+  (newId, oldId) => {
+    if (newId && newId !== oldId) {
+      isInitialized.value = false
+      initializeChat()
+    }
+  },
+  { immediate: true }
+)
+
 watch(() => props.isVisible, async (newValue) => {
   if (newValue && !isInitialized.value) {
     await initializeChat()
