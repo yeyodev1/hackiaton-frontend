@@ -21,10 +21,11 @@ export interface ChatWithDocumentRequest {
 }
 
 export interface ChatResponse {
-  id: string
-  message: string
-  conversationId: string
-  timestamp: string
+  id?: string
+  message?: string
+  content?: string
+  conversationId?: string
+  timestamp?: string
   metadata?: {
     tokensUsed?: number
     processingTime?: number
@@ -107,11 +108,26 @@ class AgentService extends APIBase {
    */
   async chatWithDocument(analysisId: string, request: ChatRequest): Promise<ChatResponse> {
     try {
-      const response = await this.post<ChatResponse>(
+      const response = await this.post(
         `${this.endpoint}/chat/document/${analysisId}`,
         request,
       )
-      return response.data
+      
+      // Manejar diferentes estructuras de respuesta del backend
+      const data = response.data as any
+      if (data.success && data.response) {
+        // Estructura nueva del backend
+        return {
+          id: data.response.analysisId || `msg_${Date.now()}`,
+          content: data.response.content,
+          message: data.response.content,
+          timestamp: data.response.timestamp,
+          conversationId: request.conversationId || ''
+        }
+      } else {
+        // Estructura antigua
+        return data as ChatResponse
+      }
     } catch (error) {
       console.error('Error en chat con documento:', error)
       throw new Error('Error al comunicarse con el agente sobre el documento')
