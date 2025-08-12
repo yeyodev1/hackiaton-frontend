@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAnalysisStore } from '@/stores/analysis'
 import { useToast } from '@/composables/useToast'
+import ChatPanel from '@/components/analysis/ChatPanel.vue'
 import type { IDocumentAnalysis } from '@/types/analysis.types'
 
 const route = useRoute()
@@ -12,45 +13,46 @@ const { triggerToast } = useToast()
 
 // Estado local
 const activeTab = ref('overview')
+const isChatOpen = ref(false)
 
 // Función para procesar contenido Markdown/HTML
 const processAnalysisContent = (content: string): string => {
   if (!content) return ''
-  
+
   let processedContent = content
-  
+
   // Convertir títulos Markdown a HTML
   processedContent = processedContent.replace(/^# (.+)$/gm, '<h1>$1</h1>')
   processedContent = processedContent.replace(/^## (.+)$/gm, '<h2>$1</h2>')
   processedContent = processedContent.replace(/^### (.+)$/gm, '<h3>$1</h3>')
   processedContent = processedContent.replace(/^#### (.+)$/gm, '<h4>$1</h4>')
-  
+
   // Convertir texto en negrita
   processedContent = processedContent.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-  
+
   // Convertir texto en cursiva
   processedContent = processedContent.replace(/\*(.+?)\*/g, '<em>$1</em>')
-  
+
   // Convertir listas numeradas
   processedContent = processedContent.replace(/^(\d+\.)\s(.+)$/gm, '<li>$2</li>')
-  
+
   // Envolver listas numeradas en <ol>
   processedContent = processedContent.replace(/((<li>.*<\/li>\s*)+)/gs, '<ol>$1</ol>')
-  
+
   // Convertir listas con guiones
   processedContent = processedContent.replace(/^-\s(.+)$/gm, '<li>$1</li>')
-  
+
   // Envolver listas con guiones en <ul> (solo si no están ya en <ol>)
   processedContent = processedContent.replace(/(?<!<ol>[\s\S]*)((<li>.*<\/li>\s*)+)(?![\s\S]*<\/ol>)/gs, '<ul>$1</ul>')
-  
+
   // Convertir párrafos (líneas que no son títulos ni listas)
   const lines = processedContent.split('\n')
   const processedLines = lines.map(line => {
     const trimmedLine = line.trim()
     if (!trimmedLine) return '<br>'
-    if (trimmedLine.startsWith('<h') || trimmedLine.startsWith('<li') || 
-        trimmedLine.startsWith('<ol') || trimmedLine.startsWith('<ul') ||
-        trimmedLine.startsWith('</ol>') || trimmedLine.startsWith('</ul>')) {
+    if (trimmedLine.startsWith('<h') || trimmedLine.startsWith('<li') ||
+      trimmedLine.startsWith('<ol') || trimmedLine.startsWith('<ul') ||
+      trimmedLine.startsWith('</ol>') || trimmedLine.startsWith('</ul>')) {
       return line
     }
     if (!trimmedLine.startsWith('<') && trimmedLine.length > 0) {
@@ -58,12 +60,12 @@ const processAnalysisContent = (content: string): string => {
     }
     return line
   })
-  
+
   processedContent = processedLines.join('\n')
-  
+
   // Limpiar líneas vacías múltiples
   processedContent = processedContent.replace(/(<br>\s*){2,}/g, '<br>')
-  
+
   return processedContent
 }
 
@@ -152,6 +154,14 @@ const shareAnalysis = () => {
   triggerToast('Función de compartir en desarrollo', 'info')
 }
 
+const toggleChat = () => {
+  isChatOpen.value = !isChatOpen.value
+}
+
+const closeChat = () => {
+  isChatOpen.value = false
+}
+
 // Formatear fecha
 const formatDate = (date: Date | string): string => {
   return new Date(date).toLocaleDateString('es-ES', {
@@ -196,21 +206,29 @@ onMounted(() => {
             @click="refreshAnalysis"
             :disabled="isLoading"
           >
-            🔄 Actualizar
+            <i class="fas fa-sync-alt"></i> Actualizar
           </button>
           <button 
             class="action-btn secondary"
             @click="downloadReport"
             :disabled="!analysis || analysis.status !== 'completed'"
           >
-            📥 Descargar
+            <i class="fas fa-download"></i> Descargar
+          </button>
+          <button 
+            class="action-btn secondary"
+            @click="toggleChat"
+            :disabled="!analysis"
+            :class="{ 'active': isChatOpen }"
+          >
+            <i class="fas fa-comments"></i> Chat IA
           </button>
           <button 
             class="action-btn primary"
             @click="shareAnalysis"
             :disabled="!analysis || analysis.status !== 'completed'"
           >
-            📤 Compartir
+            <i class="fas fa-share-alt"></i> Compartir
           </button>
         </div>
       </div>
@@ -361,6 +379,38 @@ onMounted(() => {
         </div>
       </div>
     </div>
+
+    <!-- Floating Chat Button -->
+    <div 
+      v-if="analysis"
+      class="floating-chat-button"
+      @click="toggleChat"
+      :class="{ 'active': isChatOpen }"
+    >
+      <i class="fas fa-comments"></i>
+      <span class="chat-tooltip">Chat con IA</span>
+    </div>
+
+    <!-- Chat Panel Modal/Sidebar -->
+    <Teleport to="body">
+      <div v-if="isChatOpen" class="chat-overlay" @click="closeChat">
+        <div class="chat-sidebar" @click.stop>
+          <div class="chat-sidebar-header">
+            <h3>Chat con IA</h3>
+            <button class="close-chat-btn" @click="closeChat">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+          <div class="chat-sidebar-content">
+            <ChatPanel 
+              :analysis-id="analysisId"
+              :document-name="analysis?.documentName"
+              :is-visible="isChatOpen"
+            />
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -444,11 +494,11 @@ onMounted(() => {
         white-space: nowrap;
         min-width: 0; // Permite que el texto se trunque
         max-width: 300px; // Límite máximo en desktop
-        
+
         @media (max-width: 768px) {
           max-width: 150px; // Límite más pequeño en móvil
         }
-        
+
         @media (max-width: 480px) {
           max-width: 100px; // Límite aún más pequeño en pantallas muy pequeñas
         }
@@ -658,7 +708,7 @@ onMounted(() => {
     padding-bottom: 0.5rem;
     border-bottom: 3px solid $primary-blue;
     position: relative;
-    
+
     &::before {
       content: '📋';
       margin-right: 0.5rem;
@@ -674,7 +724,7 @@ onMounted(() => {
     background: linear-gradient(135deg, rgba($secondary-purple, 0.1), rgba($primary-blue, 0.05));
     border-left: 4px solid $secondary-purple;
     border-radius: 0.5rem;
-    
+
     &::before {
       content: '🔍';
       margin-right: 0.5rem;
@@ -688,7 +738,7 @@ onMounted(() => {
     margin: 1.5rem 0 0.75rem 0;
     padding-left: 1rem;
     border-left: 3px solid $primary-light;
-    
+
     &::before {
       content: '▶️';
       margin-right: 0.5rem;
@@ -723,7 +773,7 @@ onMounted(() => {
   :deep(li) {
     margin-bottom: 0.75rem;
     position: relative;
-    
+
     &::marker {
       color: $primary-blue;
       font-weight: bold;
@@ -768,7 +818,7 @@ onMounted(() => {
   :deep(h2:contains('Resumen Ejecutivo')) {
     background: linear-gradient(135deg, rgba($success-green, 0.1), rgba($primary-blue, 0.05));
     border-left-color: $success-green;
-    
+
     &::before {
       content: '📊';
     }
@@ -777,7 +827,7 @@ onMounted(() => {
   :deep(h2:contains('Hallazgos')) {
     background: linear-gradient(135deg, rgba($warning-orange, 0.1), rgba($primary-blue, 0.05));
     border-left-color: $warning-orange;
-    
+
     &::before {
       content: '🔍';
     }
@@ -786,7 +836,7 @@ onMounted(() => {
   :deep(h2:contains('Riesgos')) {
     background: linear-gradient(135deg, rgba($error-red, 0.1), rgba($primary-blue, 0.05));
     border-left-color: $error-red;
-    
+
     &::before {
       content: '⚠️';
     }
@@ -795,7 +845,7 @@ onMounted(() => {
   :deep(h2:contains('Recomendaciones')) {
     background: linear-gradient(135deg, rgba($primary-blue, 0.1), rgba($secondary-purple, 0.05));
     border-left-color: $primary-blue;
-    
+
     &::before {
       content: '💡';
     }
@@ -804,7 +854,7 @@ onMounted(() => {
   :deep(h2:contains('Conclusiones')) {
     background: linear-gradient(135deg, rgba($success-green, 0.1), rgba($secondary-purple, 0.05));
     border-left-color: $success-green;
-    
+
     &::before {
       content: '✅';
     }
@@ -819,24 +869,24 @@ onMounted(() => {
   // Mejorar legibilidad en móviles
   @media (max-width: 768px) {
     font-size: 0.9rem;
-    
+
     :deep(h1) {
       font-size: 1.75rem;
     }
-    
+
     :deep(h2) {
       font-size: 1.375rem;
       padding: 0.5rem 0.75rem;
     }
-    
+
     :deep(h3) {
       font-size: 1.125rem;
     }
-    
+
     :deep(p) {
       text-indent: 0.5rem;
     }
-    
+
     :deep(ul),
     :deep(ol) {
       padding: 0.75rem 0.75rem 0.75rem 2rem;
@@ -863,7 +913,7 @@ onMounted(() => {
     .info-value {
       font-weight: 600;
       color: $text-primary;
-      
+
       &.document-name {
         overflow: hidden;
         text-overflow: ellipsis;
@@ -947,7 +997,152 @@ onMounted(() => {
     &:hover:not(:disabled) {
       background: darken($background-light, 5%);
     }
+
+    &.active {
+      background: $primary-blue;
+      color: white;
+      border-color: $primary-blue;
+
+      &:hover:not(:disabled) {
+        background: darken($primary-blue, 10%);
+      }
+    }
   }
+}
+
+// Floating Chat Button
+.floating-chat-button {
+  position: fixed;
+  bottom: 2rem;
+  left: 2rem;
+  width: 60px;
+  height: 60px;
+  background: $primary-blue;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+  z-index: 999;
+  color: white;
+  font-size: 1.5rem;
+
+  &:hover {
+    background: darken($primary-blue, 10%);
+    transform: scale(1.1);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+  }
+
+  &.active {
+    background: $secondary-purple;
+    transform: scale(1.05);
+  }
+
+  .chat-tooltip {
+    position: absolute;
+    left: 70px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s ease;
+    pointer-events: none;
+  }
+
+  &:hover .chat-tooltip {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  @media (max-width: 768px) {
+    bottom: 1.5rem;
+    left: 1.5rem;
+    width: 56px;
+    height: 56px;
+    font-size: 1.25rem;
+  }
+}
+
+// Chat Modal/Sidebar Styles
+.chat-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: flex;
+  justify-content: flex-end;
+  backdrop-filter: blur(4px);
+}
+
+.chat-sidebar {
+  width: 100%;
+  max-width: 500px;
+  height: 100vh;
+  background: white;
+  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  animation: slideInRight 0.3s ease-out;
+
+  @media (max-width: 768px) {
+    max-width: 100%;
+    width: 100%;
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+
+  to {
+    transform: translateX(0);
+  }
+}
+
+.chat-sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid $border-color;
+  background: $background-light;
+
+  h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: $text-primary;
+  }
+
+  .close-chat-btn {
+    background: none;
+    border: none;
+    color: $text-secondary;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: rgba($text-secondary, 0.1);
+      color: $text-primary;
+    }
+  }
+}
+
+.chat-sidebar-content {
+  flex: 1;
+  overflow: hidden;
 }
 
 .btn {
