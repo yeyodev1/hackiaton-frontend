@@ -96,6 +96,14 @@ router.beforeEach(async (to, from, next) => {
 
     // Si la ruta requiere workspace configurado y no lo está
     if (to.meta.requiresWorkspaceSetup && !workspaceStore.isWorkspaceConfigured) {
+      // Permitir acceso a documents si al menos se ha seleccionado un país
+      const hasCountrySelected = workspaceStore.selectedCountry?.code
+      
+      if (to.name === 'documents' && hasCountrySelected) {
+        // Permitir acceso a documents si hay país seleccionado
+        return next()
+      }
+      
       // Si no está en workspace-setup, redirigir allí
       if (to.name !== 'workspace-setup') {
         return next({ name: 'workspace-setup' })
