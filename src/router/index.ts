@@ -5,6 +5,8 @@ import RegisterView from '../views/RegisterView.vue'
 import VerifyView from '../views/VerifyView.vue'
 import WorkspaceSetupView from '../views/WorkspaceSetupView.vue'
 import DocumentManagementView from '../views/DocumentManagementView.vue'
+import AnalysisDetailView from '../views/AnalysisDetailView.vue'
+import ComparisonView from '../views/ComparisonView.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useWorkspaceStore } from '@/stores/workspace'
 
@@ -54,6 +56,18 @@ const router = createRouter({
       component: DocumentManagementView,
       meta: { requiresAuth: true, requiresWorkspaceSetup: true }
     },
+    {
+      path: '/analysis/:id',
+      name: 'analysis-detail',
+      component: AnalysisDetailView,
+      meta: { requiresAuth: true, requiresWorkspaceSetup: true }
+    },
+    {
+      path: '/comparison/:id',
+      name: 'comparison',
+      component: ComparisonView,
+      meta: { requiresAuth: true, requiresWorkspaceSetup: true }
+    },
     // {
     //   path: '/documents/:id',
     //   name: 'document-detail',
@@ -96,6 +110,12 @@ router.beforeEach(async (to, from, next) => {
 
     // Si la ruta requiere workspace configurado y no lo está
     if (to.meta.requiresWorkspaceSetup && !workspaceStore.isWorkspaceConfigured) {
+      console.log('🚨 Navigation Guard - Workspace no configurado')
+      console.log('🚨 Ruta destino:', to.name, to.path)
+      console.log('🚨 Workspace:', workspaceStore.workspace)
+      console.log('🚨 isWorkspaceConfigured:', workspaceStore.isWorkspaceConfigured)
+      console.log('🚨 isFullyConfigured:', workspaceStore.workspace?.isFullyConfigured)
+      
       // Permitir acceso a documents si al menos se ha seleccionado un país
       const hasCountrySelected = workspaceStore.selectedCountry?.code
       
@@ -106,6 +126,7 @@ router.beforeEach(async (to, from, next) => {
       
       // Si no está en workspace-setup, redirigir allí
       if (to.name !== 'workspace-setup') {
+        console.log('🚨 Redirigiendo a workspace-setup desde:', to.name)
         return next({ name: 'workspace-setup' })
       }
     }
