@@ -70,9 +70,32 @@ const processAnalysisContent = (content: string): string => {
 }
 
 // Computed properties
-const analysisId = computed(() => route.params.id as string)
-const analysis = computed(() => analysisStore.currentAnalysis)
-const isLoading = computed(() => analysisStore.isLoading)
+const analysisId = computed(() => {
+  const id = route.params.id as string
+  if (!id || id === 'undefined') {
+    console.warn('AnalysisDetailView: analysisId is undefined or invalid')
+    return null
+  }
+  return id
+})
+
+// Computed para obtener el documentId del chat (usa el último análisis del store)
+const chatDocumentId = computed(() => {
+  // Priorizar el documentId del último análisis del store
+  const lastDocumentId = analysisStore.lastAnalysisDocumentId
+  if (lastDocumentId) {
+    return lastDocumentId
+  }
+  // Fallback al analysisId actual si no hay último análisis
+  return analysisId.value
+})
+
+const analysis = computed(() => {
+  return analysisStore.currentAnalysis
+})
+const isLoading = computed(() => {
+  return analysisStore.isLoading
+})
 
 const statusConfig = computed(() => {
   if (!analysis.value) return { color: 'gray', label: 'Desconocido' }
@@ -130,14 +153,19 @@ const tabsConfig = computed(() => [
 
 // Métodos
 const loadAnalysis = async () => {
-  await analysisStore.fetchAnalysisById(analysisId.value)
+  if (!analysisId.value) return
+  
+  try {
+    await analysisStore.fetchAnalysisById(analysisId.value)
+  } catch (error) {
+    console.error('Error loading analysis:', error)
+  }
 }
 
 const refreshAnalysis = async () => {
-  const success = await analysisStore.refreshAnalysis(analysisId.value)
-  if (success) {
-    triggerToast('Análisis actualizado', 'success')
-  }
+  if (!analysisId.value) return
+  
+  await loadAnalysis()
 }
 
 const goBack = () => {
@@ -218,7 +246,7 @@ onMounted(() => {
           <button 
             class="action-btn secondary"
             @click="toggleChat"
-            :disabled="!analysis"
+            :disabled="!chatDocumentId || !analysis"
             :class="{ 'active': isChatOpen }"
           >
             <i class="fas fa-comments"></i> Chat IA
@@ -382,7 +410,7 @@ onMounted(() => {
 
     <!-- Floating Chat Button -->
     <div 
-      v-if="analysis"
+      v-if="chatDocumentId && analysis"
       class="floating-chat-button"
       @click="toggleChat"
       :class="{ 'active': isChatOpen }"
@@ -403,10 +431,14 @@ onMounted(() => {
           </div>
           <div class="chat-sidebar-content">
             <ChatPanel 
-              :analysis-id="analysisId"
+              v-if="chatDocumentId"
+              :analysis-id="chatDocumentId"
               :document-name="analysis?.documentName"
               :is-visible="isChatOpen"
             />
+            <div v-else class="chat-error">
+              <p>No se puede inicializar el chat: DocumentId no disponible</p>
+            </div>
           </div>
         </div>
       </div>
@@ -1143,6 +1175,21 @@ onMounted(() => {
 .chat-sidebar-content {
   flex: 1;
   overflow: hidden;
+}
+
+.chat-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 2rem;
+  text-align: center;
+
+  p {
+    color: $text-secondary;
+    font-size: 0.875rem;
+    margin: 0;
+  }
 }
 
 .btn {
