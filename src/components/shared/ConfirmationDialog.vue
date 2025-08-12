@@ -73,8 +73,6 @@ const {
 </template>
 
 <style scoped lang="scss">
-@use '@/styles/index.scss' as *;
-
 .dialog-overlay {
   position: fixed;
   inset: 0;
