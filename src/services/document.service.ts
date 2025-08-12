@@ -97,16 +97,18 @@ export interface UpdateDocumentResponse {
  * Implementa todas las operaciones CRUD para documentos del workspace
  */
 class DocumentService extends APIBase {
-  private readonly endpoint = 'documents'
+  private readonly endpoint = 'document'
 
   /**
    * Verifica si el error es de red/conectividad
    */
   private isNetworkError(error: any): boolean {
-    return !error.response || 
-           error.code === 'NETWORK_ERROR' || 
-           error.code === 'ECONNREFUSED' ||
-           error.message?.includes('Network Error')
+    return (
+      !error.response ||
+      error.code === 'NETWORK_ERROR' ||
+      error.code === 'ECONNREFUSED' ||
+      error.message?.includes('Network Error')
+    )
   }
 
   /**
@@ -115,7 +117,7 @@ class DocumentService extends APIBase {
   async uploadDocument(
     file: File,
     type: DocumentType,
-    description?: string
+    description?: string,
   ): Promise<UploadDocumentResponse> {
     try {
       const formData = new FormData()
@@ -126,22 +128,19 @@ class DocumentService extends APIBase {
         formData.append('description', description)
       }
 
-      const response = await this.post<UploadDocumentResponse>(
-        `${this.endpoint}/upload`,
-        formData
-      )
+      const response = await this.post<UploadDocumentResponse>(`${this.endpoint}/upload`, formData)
 
       return response.data
     } catch (error: any) {
       if (environment.enableDebugLogs) {
         console.error('Error uploading document, falling back to mock data:', error)
       }
-      
+
       // Fallback a datos mock si el backend no está disponible
       if (environment.useMockData || this.isNetworkError(error)) {
         return await mockDataService.uploadDocument(file, type, description)
       }
-      
+
       throw new Error(error.response?.data?.message || 'Error al subir el documento')
     }
   }
@@ -152,7 +151,7 @@ class DocumentService extends APIBase {
   async getWorkspaceDocuments(params: GetDocumentsRequest = {}): Promise<GetDocumentsResponse> {
     try {
       const queryParams = new URLSearchParams()
-      
+
       if (params.page) queryParams.append('page', params.page.toString())
       if (params.limit) queryParams.append('limit', params.limit.toString())
       if (params.type) queryParams.append('type', params.type)
@@ -161,7 +160,7 @@ class DocumentService extends APIBase {
       if (params.sortOrder) queryParams.append('sortOrder', params.sortOrder)
 
       const response = await this.get<GetDocumentsResponse>(
-        `${this.endpoint}/workspace-documents${queryParams.toString() ? '?' + queryParams.toString() : ''}`
+        `${this.endpoint}/workspace-documents${queryParams.toString() ? '?' + queryParams.toString() : ''}`,
       )
 
       return response.data
@@ -169,12 +168,12 @@ class DocumentService extends APIBase {
       if (environment.enableDebugLogs) {
         console.error('Error fetching documents, falling back to mock data:', error)
       }
-      
+
       // Fallback a datos mock si el backend no está disponible
       if (environment.useMockData || this.isNetworkError(error)) {
         return await mockDataService.getWorkspaceDocuments(params)
       }
-      
+
       throw new Error(error.response?.data?.message || 'Error al obtener los documentos')
     }
   }
@@ -184,21 +183,19 @@ class DocumentService extends APIBase {
    */
   async deleteDocument(documentId: string): Promise<DeleteDocumentResponse> {
     try {
-      const response = await this.delete<DeleteDocumentResponse>(
-        `${this.endpoint}/${documentId}`
-      )
+      const response = await this.delete<DeleteDocumentResponse>(`${this.endpoint}/${documentId}`)
 
       return response.data
     } catch (error: any) {
       if (environment.enableDebugLogs) {
         console.error('Error deleting document, falling back to mock data:', error)
       }
-      
+
       // Fallback a datos mock si el backend no está disponible
       if (environment.useMockData || this.isNetworkError(error)) {
         return await mockDataService.deleteDocument(documentId)
       }
-      
+
       throw new Error(error.response?.data?.message || 'Error al eliminar el documento')
     }
   }
@@ -208,12 +205,12 @@ class DocumentService extends APIBase {
    */
   async updateDocument(
     documentId: string,
-    updates: UpdateDocumentRequest
+    updates: UpdateDocumentRequest,
   ): Promise<UpdateDocumentResponse> {
     try {
       const response = await this.put<UpdateDocumentResponse>(
         `${this.endpoint}/${documentId}`,
-        updates
+        updates,
       )
 
       return response.data
@@ -221,12 +218,12 @@ class DocumentService extends APIBase {
       if (environment.enableDebugLogs) {
         console.error('Error updating document, falling back to mock data:', error)
       }
-      
+
       // Fallback a datos mock si el backend no está disponible
       if (environment.useMockData || this.isNetworkError(error)) {
         return await mockDataService.updateDocument(documentId, updates)
       }
-      
+
       throw new Error(error.response?.data?.message || 'Error al actualizar el documento')
     }
   }
@@ -236,22 +233,21 @@ class DocumentService extends APIBase {
    */
   async downloadDocument(documentId: string): Promise<Blob> {
     try {
-      const response = await this.get<Blob>(
-        `${this.endpoint}/${documentId}/download`,
-        { responseType: 'blob' }
-      )
+      const response = await this.get<Blob>(`${this.endpoint}/${documentId}/download`, {
+        responseType: 'blob',
+      })
 
       return response.data
     } catch (error: any) {
       if (environment.enableDebugLogs) {
         console.error('Error downloading document, falling back to mock data:', error)
       }
-      
+
       // Fallback a datos mock si el backend no está disponible
       if (environment.useMockData || this.isNetworkError(error)) {
         return await mockDataService.downloadDocument(documentId)
       }
-      
+
       throw new Error(error.response?.data?.message || 'Error al descargar el documento')
     }
   }
@@ -262,7 +258,7 @@ class DocumentService extends APIBase {
   async getDocumentPreview(documentId: string): Promise<string> {
     try {
       const response = await this.get<{ previewUrl: string }>(
-        `${this.endpoint}/${documentId}/preview`
+        `${this.endpoint}/${documentId}/preview`,
       )
 
       return response.data.previewUrl
@@ -270,12 +266,12 @@ class DocumentService extends APIBase {
       if (environment.enableDebugLogs) {
         console.error('Error getting document preview, falling back to mock data:', error)
       }
-      
+
       // Fallback a datos mock si el backend no está disponible
       if (environment.useMockData || this.isNetworkError(error)) {
         return await mockDataService.getDocumentPreview(documentId)
       }
-      
+
       throw new Error(error.response?.data?.message || 'Error al obtener la vista previa')
     }
   }
