@@ -4,6 +4,7 @@ import LoginView from '../views/LoginView.vue'
 import RegisterView from '../views/RegisterView.vue'
 import VerifyView from '../views/VerifyView.vue'
 import WorkspaceSetupView from '../views/WorkspaceSetupView.vue'
+import DocumentManagementView from '../views/DocumentManagementView.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useWorkspaceStore } from '@/stores/workspace'
 
@@ -47,6 +48,18 @@ const router = createRouter({
       component: () => import('../views/HomeView.vue'), // Temporal, usar HomeView como dashboard
       meta: { requiresAuth: true, requiresWorkspaceSetup: true }
     },
+    {
+      path: '/documents',
+      name: 'documents',
+      component: DocumentManagementView,
+      meta: { requiresAuth: true, requiresWorkspaceSetup: true }
+    },
+    // {
+    //   path: '/documents/:id',
+    //   name: 'document-detail',
+    //   component: () => import('../views/DocumentDetailView.vue'),
+    //   meta: { requiresAuth: true, requiresWorkspaceSetup: true }
+    // },
   ],
 })
 
@@ -91,9 +104,9 @@ router.beforeEach(async (to, from, next) => {
 
     // Si está en una ruta pública pero ya está autenticado
     if (isPublicRoute) {
-      // Si el workspace está configurado, ir al dashboard
+      // Si el workspace está configurado, ir a la gestión de documentos
       if (workspaceStore.isWorkspaceConfigured) {
-        return next({ name: 'dashboard' })
+        return next({ name: 'documents' })
       } else {
         // Si no está configurado, ir a workspace-setup
         return next({ name: 'workspace-setup' })
