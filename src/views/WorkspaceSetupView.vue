@@ -87,8 +87,8 @@ const handleSubmit = async () => {
     await workspaceStore.updateWorkspaceCountry(selectedCountry.value)
     triggerToast('País configurado correctamente. Usaremos las leyes de Ecuador para el análisis.', 'success')
     
-    // Redirigir al dashboard o siguiente paso
-    await router.push('/dashboard')
+    // Redirigir a la gestión de documentos
+    await router.push('/documents')
   } catch (error: any) {
     console.error('Error configurando país:', error)
     triggerToast('Error al configurar el país', 'error')
