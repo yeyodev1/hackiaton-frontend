@@ -19,7 +19,13 @@ $gray-200: #e5e7eb;
 // Colores de estado
 $success-green: #10b981;     // Verde para éxito
 $warning-yellow: #f59e0b;    // Amarillo para advertencias
+$warning-orange: #f59e0b;    // Alias para compatibilidad
 $error-red: #ef4444;         // Rojo para errores
+
+// Colores adicionales para análisis
+$primary-blue: $accent-blue; // Alias para consistencia
+$secondary-purple: #8b5cf6;  // Púrpura secundario
+$background-light: #f8fafc;  // Fondo claro
 
 // Overlays y transparencias
 $overlay-dark: rgba($primary-dark, 0.1);
