@@ -61,6 +61,16 @@ export const useAnalysisStore = defineStore('analysis', () => {
     analyses.value.filter(analysis => analysis.status === 'failed')
   )
 
+  // Computed para obtener el último análisis del array
+  const lastAnalysis = computed(() => {
+    return analyses.value.length > 0 ? analyses.value[analyses.value.length - 1] : null
+  })
+
+  // Computed para obtener el documentId del último análisis
+  const lastAnalysisDocumentId = computed(() => {
+    return lastAnalysis.value?.documentId || null
+  })
+
   // Actions
   const clearError = () => {
     error.value = null
@@ -108,6 +118,40 @@ export const useAnalysisStore = defineStore('analysis', () => {
     } finally {
       setAnalyzing(false)
     }
+  }
+
+  /**
+   * Función para manejar la respuesta del análisis desde el backend
+   */
+  const handleAnalysisResponse = (analysisData: any): IDocumentAnalysis | null => {
+    if (analysisData.success && analysisData.analysis) {
+      const analysis: IDocumentAnalysis = {
+        id: analysisData.analysisId,
+        documentId: analysisData.analysis.documentId,
+        documentName: analysisData.analysis.documentName,
+        documentType: analysisData.analysis.documentType,
+        status: 'completed',
+        aiAnalysis: analysisData.analysis.aiAnalysis,
+        analysisDate: new Date(analysisData.analysis.analysisDate),
+        processingTime: 0, // No se proporciona en la respuesta
+        workspaceId: analysisData.workspace.id,
+        createdAt: new Date(analysisData.analysis.analysisDate),
+        updatedAt: new Date(analysisData.analysis.analysisDate)
+      }
+
+      // Agregar o actualizar el análisis en la lista
+      const existingIndex = analyses.value.findIndex(a => a.id === analysis.id)
+      if (existingIndex >= 0) {
+        analyses.value[existingIndex] = analysis
+      } else {
+        analyses.value.unshift(analysis)
+      }
+
+      // Establecer como análisis actual
+      currentAnalysis.value = analysis
+      return analysis
+    }
+    return null
   }
 
   /**
@@ -390,6 +434,39 @@ export const useAnalysisStore = defineStore('analysis', () => {
     }
   }
 
+  /**
+   * Obtiene un análisis por ID desde la lista local
+   */
+  const getAnalysisById = (analysisId: string): IDocumentAnalysis | null => {
+    return analyses.value.find(a => a.id === analysisId) || null
+  }
+
+  /**
+   * Obtiene un análisis por documentId desde la lista local
+   */
+  const getAnalysisByDocumentId = (documentId: string): IDocumentAnalysis | null => {
+    return analyses.value.find(a => a.documentId === documentId) || null
+  }
+
+  /**
+   * Obtiene la configuración de estado para un análisis
+   */
+  const getStatusConfig = (analysisId: string) => {
+    const analysis = getAnalysisById(analysisId)
+    if (!analysis) return { color: 'gray', label: 'Desconocido' }
+
+    switch (analysis.status) {
+      case 'completed':
+        return { color: 'green', label: 'Completado' }
+      case 'processing':
+        return { color: 'blue', label: 'Procesando' }
+      case 'failed':
+        return { color: 'red', label: 'Error' }
+      default:
+        return { color: 'gray', label: 'Desconocido' }
+    }
+  }
+
   return {
     // Estado
     analyses,
@@ -408,6 +485,8 @@ export const useAnalysisStore = defineStore('analysis', () => {
     completedAnalyses,
     processingAnalyses,
     failedAnalyses,
+    lastAnalysis,
+    lastAnalysisDocumentId,
     
     // Actions
     clearError,
@@ -427,6 +506,10 @@ export const useAnalysisStore = defineStore('analysis', () => {
     clearAnalyses,
     refreshAnalysis,
     removeAnalysis,
-    updateAnalysisStatus
+    updateAnalysisStatus,
+    getAnalysisById,
+    getAnalysisByDocumentId,
+    getStatusConfig,
+    handleAnalysisResponse
   }
 })
