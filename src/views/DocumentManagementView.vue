@@ -215,9 +215,9 @@ const analyzeDocument = async () => {
       showAnalysisModal.value = false
       documentToAnalyze.value = null
       triggerToast('Análisis iniciado correctamente', 'success')
-      console.log('previo a enviar a otra pagina: ', analysis.analysisId)
-      // Navegar a la vista de análisis usando el analysisId correcto
-      router.push(`/analysis/${analysis.analysisId || analysis.id}`)
+      console.log('previo a enviar a otra pagina: ', analysis.id)
+      // Navegar a la vista de análisis usando el id correcto
+      router.push(`/analysis/${analysis.id}`)
     }
   } catch (error) {
     console.error('Error analyzing document:', error)
