@@ -1,9 +1,12 @@
 <script setup lang="ts">
+import { useAuthStore } from '@/stores/auth'
+
 // Header component para agente legal
+const authStore = useAuthStore()
 </script>
 
 <template>
-  <header class="header">
+  <header v-if="!authStore.isAuthenticated" class="header">
     <div class="header__container">
       <div class="header__logo">
         <h1 class="header__title">LegalAgent</h1>
