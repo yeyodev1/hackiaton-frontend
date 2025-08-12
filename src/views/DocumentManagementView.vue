@@ -1,19 +1,26 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useDocumentStore } from '@/stores/document'
 import { useWorkspaceStore } from '@/stores/workspace'
+import { useAnalysisStore } from '@/stores/analysis'
 import type { Document as DocumentType } from '@/services/document.service'
 import { useToast } from '@/composables/useToast'
 
 const documentStore = useDocumentStore()
 const workspaceStore = useWorkspaceStore()
+const analysisStore = useAnalysisStore()
+const router = useRouter()
 const { triggerToast } = useToast()
 
 // Estado local
 const isDragOver = ref(false)
 const showUploadModal = ref(false)
 const showDeleteModal = ref(false)
+const showAnalysisModal = ref(false)
+const showCompareModal = ref(false)
 const documentToDelete = ref<DocumentType | null>(null)
+const documentToAnalyze = ref<DocumentType | null>(null)
 const selectedFiles = ref<File[]>([])
 const uploadType = ref<DocumentType['type']>('contract')
 const uploadDescription = ref('')
@@ -21,6 +28,7 @@ const searchQuery = ref('')
 const selectedTypeFilter = ref<DocumentType['type'] | ''>('')
 const viewMode = ref<'grid' | 'list'>('grid')
 const fileInput = ref<HTMLInputElement | null>(null)
+const analysisType = ref<'pliego' | 'propuesta' | 'contrato'>('contrato')
 
 // Tipos de documento disponibles
 const documentTypes = [
@@ -159,6 +167,93 @@ const clearSelection = () => {
 
 const openFileDialog = () => {
   fileInput.value?.click()
+}
+
+// Métodos de análisis
+const openAnalysisModal = (document: DocumentType) => {
+  console.log('Opening analysis modal for document:', document)
+  console.log('Document status:', document.status)
+  documentToAnalyze.value = document
+  // Mapear tipo de documento a tipo de análisis
+  if (document.type === 'pliego') {
+    analysisType.value = 'pliego'
+  } else if (document.type === 'propuesta') {
+    analysisType.value = 'propuesta'
+  } else {
+    analysisType.value = 'contrato'
+  }
+  showAnalysisModal.value = true
+}
+
+const analyzeDocument = async () => {
+  console.log('Starting document analysis...')
+  console.log('Document to analyze:', documentToAnalyze.value)
+  console.log('Workspace:', workspaceStore.workspace)
+
+  if (!documentToAnalyze.value || !workspaceStore.workspace) {
+    console.log('Missing document or workspace')
+    return
+  }
+
+  try {
+    console.log('Analyzing document by URL:', documentToAnalyze.value.url)
+    console.log('Analysis request:', {
+      workspaceId: workspaceStore.workspace._id,
+      documentType: analysisType.value,
+      documentUrl: documentToAnalyze.value.url!,
+      documentName: documentToAnalyze.value.originalName!
+    })
+
+    const analysis = await analysisStore.analyzeDocumentByUrl({
+      workspaceId: workspaceStore.workspace._id,
+      documentType: analysisType.value,
+      documentUrl: documentToAnalyze.value.url!,
+      documentName: documentToAnalyze.value.originalName!
+    })
+
+    if (analysis) {
+      showAnalysisModal.value = false
+      documentToAnalyze.value = null
+      triggerToast('Análisis iniciado correctamente', 'success')
+      console.log('previo a enviar a otra pagina: ', analysis.analysisId)
+      // Navegar a la vista de análisis usando el analysisId correcto
+      router.push(`/analysis/${analysis.analysisId || analysis.id}`)
+    }
+  } catch (error) {
+    console.error('Error analyzing document:', error)
+    triggerToast('Error al iniciar el análisis', 'error')
+  }
+}
+
+const openCompareModal = () => {
+  if (documentStore.selectedDocuments.length < 2) {
+    triggerToast('Selecciona al menos 2 documentos para comparar', 'warning')
+    return
+  }
+  showCompareModal.value = true
+}
+
+const compareDocuments = async () => {
+  if (!workspaceStore.workspace || documentStore.selectedDocuments.length < 2) return
+
+  try {
+    const success = await analysisStore.compareDocuments({
+      workspaceId: workspaceStore.workspace._id,
+      documentIds: documentStore.selectedDocuments
+    })
+
+    if (success) {
+      showCompareModal.value = false
+      documentStore.clearSelection()
+      triggerToast('Comparación iniciada correctamente', 'success')
+
+      // Navegar a la vista de comparación
+      router.push('/comparison/new')
+    }
+  } catch (error) {
+    console.error('Error comparing documents:', error)
+    triggerToast('Error al iniciar la comparación', 'error')
+  }
 }
 
 // Formatear tamaño de archivo
@@ -310,6 +405,14 @@ onMounted(async () => {
             {{ documentStore.selectedDocuments.length }} seleccionados
           </span>
           <button 
+            v-if="documentStore.selectedDocuments.length >= 2"
+            class="action-button primary"
+            @click="openCompareModal"
+            :disabled="analysisStore.isComparing"
+          >
+            {{ analysisStore.isComparing ? 'Comparando...' : '🔍 Comparar' }}
+          </button>
+          <button 
             class="action-button danger"
             @click="deleteSelectedDocuments"
           >
@@ -402,6 +505,13 @@ onMounted(async () => {
           <div class="document-actions">
             <button 
               class="action-btn primary"
+              @click="openAnalysisModal(document)"
+              :disabled="document.status !== 'completed' || analysisStore.isAnalyzing"
+            >
+              {{ analysisStore.isAnalyzing ? '⏳ Analizando...' : '🔍 Analizar' }}
+            </button>
+            <button 
+              class="action-btn secondary"
               @click="downloadDocument(document)"
               :disabled="document.status !== 'completed'"
             >
@@ -540,6 +650,151 @@ onMounted(async () => {
             @click="deleteDocument"
           >
             Eliminar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de análisis -->
+    <div v-if="showAnalysisModal" class="modal-overlay" @click="showAnalysisModal = false">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h3>🔍 Analizar Documento</h3>
+          <button class="modal-close" @click="showAnalysisModal = false">✕</button>
+        </div>
+        
+        <div class="modal-body">
+          <div v-if="documentToAnalyze" class="analysis-info">
+            <div class="document-preview">
+              <div class="document-icon">
+                {{ getDocumentTypeConfig(documentToAnalyze.type).icon }}
+              </div>
+              <div class="document-details">
+                <h4>{{ documentToAnalyze.originalName }}</h4>
+                <p class="document-type-label">
+                  {{ getDocumentTypeConfig(documentToAnalyze.type).label }}
+                </p>
+              </div>
+            </div>
+            
+            <div class="analysis-form">
+              <div class="form-group">
+                <label for="analysis-type">Tipo de análisis</label>
+                <select 
+                  id="analysis-type"
+                  v-model="analysisType"
+                  class="form-select"
+                >
+                  <option value="pliego">📋 Pliego de Condiciones</option>
+                  <option value="propuesta">💼 Propuesta Técnica</option>
+                  <option value="contrato">📄 Contrato</option>
+                </select>
+              </div>
+              
+              <div class="analysis-description">
+                <h5>¿Qué incluye el análisis?</h5>
+                <ul>
+                  <li>🔍 Análisis de contenido con IA</li>
+                  <li>⚖️ Validación legal y normativa</li>
+                  <li>🔧 Evaluación técnica</li>
+                  <li>💰 Análisis económico</li>
+                  <li>⚠️ Identificación de riesgos</li>
+                  <li>✅ Validación de RUC (si aplica)</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <div v-if="analysisStore.isAnalyzing" class="analysis-progress">
+            <div class="loading-spinner"></div>
+            <p>Iniciando análisis...</p>
+          </div>
+        </div>
+        
+        <div class="modal-footer">
+          <button 
+            class="btn secondary"
+            @click="showAnalysisModal = false"
+            :disabled="analysisStore.isAnalyzing"
+          >
+            Cancelar
+          </button>
+          <button 
+            class="btn primary"
+            @click="analyzeDocument"
+            :disabled="analysisStore.isAnalyzing"
+          >
+            {{ analysisStore.isAnalyzing ? 'Analizando...' : '🚀 Iniciar Análisis' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de comparación -->
+    <div v-if="showCompareModal" class="modal-overlay" @click="showCompareModal = false">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h3>🔍 Comparar Documentos</h3>
+          <button class="modal-close" @click="showCompareModal = false">✕</button>
+        </div>
+        
+        <div class="modal-body">
+          <div class="comparison-info">
+            <h4>Documentos seleccionados ({{ documentStore.selectedDocuments.length }})</h4>
+            
+            <div class="selected-documents">
+              <div 
+                v-for="docId in documentStore.selectedDocuments" 
+                :key="docId"
+                class="selected-document"
+              >
+                <div class="doc-icon">
+                  {{getDocumentTypeConfig(documentStore.documents.find(d => d._id === docId)?.type || 'other').icon}}
+                </div>
+                <div class="doc-info">
+                  <span class="doc-name">
+                    {{documentStore.documents.find(d => d._id === docId)?.originalName}}
+                  </span>
+                  <span class="doc-type">
+                    {{getDocumentTypeConfig(documentStore.documents.find(d => d._id === docId)?.type || 'other').label}}
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="comparison-description">
+              <h5>¿Qué incluye la comparación?</h5>
+              <ul>
+                <li>📊 Análisis comparativo detallado</li>
+                <li>⚖️ Evaluación legal y de cumplimiento</li>
+                <li>🔧 Comparación técnica</li>
+                <li>💰 Análisis económico comparativo</li>
+                <li>🏆 Ranking y recomendaciones</li>
+                <li>⚠️ Identificación de riesgos por documento</li>
+              </ul>
+            </div>
+          </div>
+          
+          <div v-if="analysisStore.isComparing" class="comparison-progress">
+            <div class="loading-spinner"></div>
+            <p>Iniciando comparación...</p>
+          </div>
+        </div>
+        
+        <div class="modal-footer">
+          <button 
+            class="btn secondary"
+            @click="showCompareModal = false"
+            :disabled="analysisStore.isComparing"
+          >
+            Cancelar
+          </button>
+          <button 
+            class="btn primary"
+            @click="compareDocuments"
+            :disabled="analysisStore.isComparing"
+          >
+            {{ analysisStore.isComparing ? 'Comparando...' : '🚀 Iniciar Comparación' }}
           </button>
         </div>
       </div>
@@ -1093,7 +1348,7 @@ onMounted(async () => {
           color: #999;
           cursor: not-allowed;
           pointer-events: none;
-          
+
           &:hover {
             background: #f5f5f5;
             transform: none;
@@ -1332,6 +1587,191 @@ onMounted(async () => {
           background: darken($error-red, 10%);
         }
       }
+    }
+  }
+
+  // Estilos para modales de análisis y comparación
+  .analysis-info,
+  .comparison-info {
+    .document-preview {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem;
+      background: $background-light;
+      border-radius: 0.5rem;
+      margin-bottom: 1.5rem;
+
+      .document-icon {
+        font-size: 2rem;
+        width: 3rem;
+        height: 3rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .document-details {
+        flex: 1;
+
+        h4 {
+          margin: 0 0 0.25rem 0;
+          font-size: 1.1rem;
+          color: $text-primary;
+        }
+
+        .document-type-label {
+          margin: 0;
+          font-size: 0.875rem;
+          color: $text-secondary;
+        }
+      }
+    }
+
+    .analysis-form {
+      .form-group {
+        margin-bottom: 1.5rem;
+
+        label {
+          display: block;
+          margin-bottom: 0.5rem;
+          font-weight: 600;
+          color: $text-primary;
+        }
+
+        .form-select {
+          width: 100%;
+          padding: 0.75rem;
+          border: 1px solid $border-color;
+          border-radius: 0.5rem;
+          font-size: 1rem;
+          background: white;
+
+          &:focus {
+            outline: none;
+            border-color: $primary-blue;
+            box-shadow: 0 0 0 3px rgba($primary-blue, 0.1);
+          }
+        }
+      }
+    }
+
+    .analysis-description,
+    .comparison-description {
+      h5 {
+        margin: 0 0 0.75rem 0;
+        font-size: 1rem;
+        color: $text-primary;
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 1.25rem;
+        list-style: none;
+
+        li {
+          margin-bottom: 0.5rem;
+          font-size: 0.875rem;
+          color: $text-secondary;
+          position: relative;
+
+          &::before {
+            content: '';
+            position: absolute;
+            left: -1.25rem;
+            top: 0.5rem;
+            width: 4px;
+            height: 4px;
+            background: $primary-blue;
+            border-radius: 50%;
+          }
+        }
+      }
+    }
+
+    .selected-documents {
+      margin-bottom: 1.5rem;
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid $border-color;
+      border-radius: 0.5rem;
+
+      .selected-document {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem;
+        border-bottom: 1px solid $border-color;
+
+        &:last-child {
+          border-bottom: none;
+        }
+
+        .doc-icon {
+          font-size: 1.5rem;
+          width: 2.5rem;
+          height: 2.5rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: $background-light;
+          border-radius: 0.375rem;
+        }
+
+        .doc-info {
+          flex: 1;
+
+          .doc-name {
+            display: block;
+            font-weight: 600;
+            color: $text-primary;
+            margin-bottom: 0.125rem;
+          }
+
+          .doc-type {
+            display: block;
+            font-size: 0.75rem;
+            color: $text-secondary;
+          }
+        }
+      }
+    }
+  }
+
+  .analysis-progress,
+  .comparison-progress {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    padding: 2rem;
+    text-align: center;
+
+    .loading-spinner {
+      width: 2rem;
+      height: 2rem;
+      border: 3px solid $border-color;
+      border-top: 3px solid $primary-blue;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    p {
+      margin: 0;
+      color: $text-secondary;
+    }
+  }
+
+  @keyframes spin {
+    0% {
+      transform: rotate(0deg);
+    }
+
+    100% {
+      transform: rotate(360deg);
     }
   }
 }
