@@ -1,23 +1,32 @@
 import APIBase from './httpBase'
+import mockDataService from './mockData.service'
+import environment from '@/config/environment'
 
 // Tipos de documentos soportados
 export type DocumentType = 'contract' | 'pliego' | 'propuesta' | 'constitution' | 'other'
 
+// Estados de procesamiento del documento
+export type DocumentStatus = 'processing' | 'completed' | 'error'
+
 // Interfaz principal del documento
 export interface Document {
-  _id: string
+  id: string // Backend usa 'id' en lugar de '_id'
   name: string
-  originalName: string
   type: DocumentType
-  size: number
-  mimeType: string
   description?: string
   uploadedAt: string
-  updatedAt: string
-  workspaceId: string
-  uploadedBy: string
-  url: string
+  hasExtractedText?: boolean // Campo que devuelve el backend
+  // Campos adicionales para compatibilidad con el frontend
+  _id?: string
+  originalName?: string
+  size?: number
+  mimeType?: string
+  updatedAt?: string
+  workspaceId?: string
+  uploadedBy?: string
+  url?: string
   thumbnailUrl?: string
+  status?: DocumentStatus
   metadata?: {
     pages?: number
     duration?: number
@@ -61,7 +70,8 @@ export interface GetDocumentsResponse {
   success: boolean
   message: string
   documents: Document[]
-  totalCount: number
+  // El backend no devuelve estos campos, los agregamos para compatibilidad
+  totalCount?: number
   pagination?: {
     page: number
     limit: number
@@ -90,6 +100,16 @@ class DocumentService extends APIBase {
   private readonly endpoint = 'documents'
 
   /**
+   * Verifica si el error es de red/conectividad
+   */
+  private isNetworkError(error: any): boolean {
+    return !error.response || 
+           error.code === 'NETWORK_ERROR' || 
+           error.code === 'ECONNREFUSED' ||
+           error.message?.includes('Network Error')
+  }
+
+  /**
    * Sube un nuevo documento al workspace
    */
   async uploadDocument(
@@ -99,8 +119,9 @@ class DocumentService extends APIBase {
   ): Promise<UploadDocumentResponse> {
     try {
       const formData = new FormData()
-      formData.append('file', file)
-      formData.append('type', type)
+      formData.append('document', file) // Backend espera 'document', no 'file'
+      formData.append('documentType', type) // Backend espera 'documentType'
+      formData.append('title', file.name.split('.')[0]) // Backend requiere 'title'
       if (description) {
         formData.append('description', description)
       }
@@ -112,30 +133,16 @@ class DocumentService extends APIBase {
 
       return response.data
     } catch (error: any) {
-      // Simular respuesta para desarrollo
-      const mockDocument: Document = {
-        _id: `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        name: file.name.split('.')[0],
-        originalName: file.name,
-        type,
-        size: file.size,
-        mimeType: file.type,
-        description,
-        uploadedAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        workspaceId: 'workspace_1',
-        uploadedBy: 'user_1',
-        url: URL.createObjectURL(file),
-        metadata: {
-          pages: type === 'contract' ? Math.floor(Math.random() * 50) + 1 : undefined
-        }
+      if (environment.enableDebugLogs) {
+        console.error('Error uploading document, falling back to mock data:', error)
       }
-
-      return {
-        success: true,
-        message: 'Documento subido correctamente',
-        document: mockDocument
+      
+      // Fallback a datos mock si el backend no está disponible
+      if (environment.useMockData || this.isNetworkError(error)) {
+        return await mockDataService.uploadDocument(file, type, description)
       }
+      
+      throw new Error(error.response?.data?.message || 'Error al subir el documento')
     }
   }
 
@@ -154,72 +161,21 @@ class DocumentService extends APIBase {
       if (params.sortOrder) queryParams.append('sortOrder', params.sortOrder)
 
       const response = await this.get<GetDocumentsResponse>(
-        `${this.endpoint}?${queryParams.toString()}`
+        `${this.endpoint}/workspace-documents${queryParams.toString() ? '?' + queryParams.toString() : ''}`
       )
 
       return response.data
     } catch (error: any) {
-      // Simular respuesta para desarrollo
-      const mockDocuments: Document[] = [
-        {
-          _id: 'doc_1',
-          name: 'Contrato de Servicios 2024',
-          originalName: 'contrato_servicios_2024.pdf',
-          type: 'contract',
-          size: 2048576,
-          mimeType: 'application/pdf',
-          description: 'Contrato principal para servicios de consultoría',
-          uploadedAt: new Date(Date.now() - 86400000).toISOString(),
-          updatedAt: new Date(Date.now() - 86400000).toISOString(),
-          workspaceId: 'workspace_1',
-          uploadedBy: 'user_1',
-          url: '#',
-          metadata: { pages: 15 }
-        },
-        {
-          _id: 'doc_2',
-          name: 'Pliego de Condiciones Técnicas',
-          originalName: 'pliego_tecnico.docx',
-          type: 'pliego',
-          size: 1024000,
-          mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-          description: 'Especificaciones técnicas del proyecto',
-          uploadedAt: new Date(Date.now() - 172800000).toISOString(),
-          updatedAt: new Date(Date.now() - 172800000).toISOString(),
-          workspaceId: 'workspace_1',
-          uploadedBy: 'user_1',
-          url: '#',
-          metadata: { pages: 8 }
-        },
-        {
-          _id: 'doc_3',
-          name: 'Propuesta Económica',
-          originalName: 'propuesta_economica.xlsx',
-          type: 'propuesta',
-          size: 512000,
-          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-          description: 'Desglose de costos y presupuesto',
-          uploadedAt: new Date(Date.now() - 259200000).toISOString(),
-          updatedAt: new Date(Date.now() - 259200000).toISOString(),
-          workspaceId: 'workspace_1',
-          uploadedBy: 'user_1',
-          url: '#'
-        }
-      ]
-
-      return {
-        success: true,
-        message: 'Documentos obtenidos correctamente',
-        documents: mockDocuments,
-        totalCount: mockDocuments.length,
-        pagination: {
-          page: params.page || 1,
-          limit: params.limit || 10,
-          totalPages: 1,
-          hasNext: false,
-          hasPrev: false
-        }
+      if (environment.enableDebugLogs) {
+        console.error('Error fetching documents, falling back to mock data:', error)
       }
+      
+      // Fallback a datos mock si el backend no está disponible
+      if (environment.useMockData || this.isNetworkError(error)) {
+        return await mockDataService.getWorkspaceDocuments(params)
+      }
+      
+      throw new Error(error.response?.data?.message || 'Error al obtener los documentos')
     }
   }
 
@@ -234,11 +190,16 @@ class DocumentService extends APIBase {
 
       return response.data
     } catch (error: any) {
-      // Simular respuesta para desarrollo
-      return {
-        success: true,
-        message: 'Documento eliminado correctamente'
+      if (environment.enableDebugLogs) {
+        console.error('Error deleting document, falling back to mock data:', error)
       }
+      
+      // Fallback a datos mock si el backend no está disponible
+      if (environment.useMockData || this.isNetworkError(error)) {
+        return await mockDataService.deleteDocument(documentId)
+      }
+      
+      throw new Error(error.response?.data?.message || 'Error al eliminar el documento')
     }
   }
 
@@ -257,27 +218,16 @@ class DocumentService extends APIBase {
 
       return response.data
     } catch (error: any) {
-      // Simular respuesta para desarrollo
-      const mockDocument: Document = {
-        _id: documentId,
-        name: updates.name || 'Documento Actualizado',
-        originalName: 'documento_actualizado.pdf',
-        type: updates.type || 'other',
-        size: 1024000,
-        mimeType: 'application/pdf',
-        description: updates.description,
-        uploadedAt: new Date(Date.now() - 86400000).toISOString(),
-        updatedAt: new Date().toISOString(),
-        workspaceId: 'workspace_1',
-        uploadedBy: 'user_1',
-        url: '#'
+      if (environment.enableDebugLogs) {
+        console.error('Error updating document, falling back to mock data:', error)
       }
-
-      return {
-        success: true,
-        message: 'Documento actualizado correctamente',
-        document: mockDocument
+      
+      // Fallback a datos mock si el backend no está disponible
+      if (environment.useMockData || this.isNetworkError(error)) {
+        return await mockDataService.updateDocument(documentId, updates)
       }
+      
+      throw new Error(error.response?.data?.message || 'Error al actualizar el documento')
     }
   }
 
@@ -293,9 +243,16 @@ class DocumentService extends APIBase {
 
       return response.data
     } catch (error: any) {
-      // Simular blob para desarrollo
-      const mockContent = 'Contenido simulado del documento'
-      return new Blob([mockContent], { type: 'application/pdf' })
+      if (environment.enableDebugLogs) {
+        console.error('Error downloading document, falling back to mock data:', error)
+      }
+      
+      // Fallback a datos mock si el backend no está disponible
+      if (environment.useMockData || this.isNetworkError(error)) {
+        return await mockDataService.downloadDocument(documentId)
+      }
+      
+      throw new Error(error.response?.data?.message || 'Error al descargar el documento')
     }
   }
 
@@ -310,8 +267,16 @@ class DocumentService extends APIBase {
 
       return response.data.previewUrl
     } catch (error: any) {
-      // Simular URL de vista previa
-      return '#'
+      if (environment.enableDebugLogs) {
+        console.error('Error getting document preview, falling back to mock data:', error)
+      }
+      
+      // Fallback a datos mock si el backend no está disponible
+      if (environment.useMockData || this.isNetworkError(error)) {
+        return await mockDataService.getDocumentPreview(documentId)
+      }
+      
+      throw new Error(error.response?.data?.message || 'Error al obtener la vista previa')
     }
   }
 }
