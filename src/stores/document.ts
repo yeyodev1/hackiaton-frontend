@@ -93,7 +93,7 @@ export const useDocumentStore = defineStore('document', () => {
 
     documents.value.forEach((doc) => {
       stats.byType[doc.type]++
-      stats.totalSize += doc.size
+      stats.totalSize += doc.size || 0
 
       if (new Date(doc.uploadedAt) > oneWeekAgo) {
         stats.recentUploads++
@@ -117,7 +117,7 @@ export const useDocumentStore = defineStore('document', () => {
       filtered = filtered.filter(
         (doc) =>
           doc.name.toLowerCase().includes(searchTerm) ||
-          doc.originalName.toLowerCase().includes(searchTerm) ||
+          (doc.originalName || '').toLowerCase().includes(searchTerm) ||
           doc.description?.toLowerCase().includes(searchTerm),
       )
     }
@@ -126,7 +126,7 @@ export const useDocumentStore = defineStore('document', () => {
   })
 
   const selectedDocumentsData = computed(() =>
-    documents.value.filter((doc) => selectedDocuments.value.includes(doc._id)),
+    documents.value.filter((doc) => selectedDocuments.value.includes(doc._id || doc.id)),
   )
 
   // Actions
@@ -164,7 +164,7 @@ export const useDocumentStore = defineStore('document', () => {
   }
 
   const selectAllDocuments = () => {
-    selectedDocuments.value = documents.value.map((doc) => doc._id)
+    selectedDocuments.value = documents.value.map((doc) => doc._id || doc.id).filter(Boolean) as string[]
   }
 
   const clearSelection = () => {
@@ -201,12 +201,26 @@ export const useDocumentStore = defineStore('document', () => {
       uploadProgress.value = 100
 
       if (response.success) {
-        documents.value.unshift(response.document)
+        // Normalizar documento para compatibilidad con el frontend
+        const normalizedDocument = {
+          ...response.document,
+          _id: response.document.id,
+          originalName: response.document.originalName || response.document.name,
+          size: response.document.size || 0,
+          mimeType: response.document.mimeType || 'application/octet-stream',
+          updatedAt: response.document.updatedAt || response.document.uploadedAt,
+          workspaceId: response.document.workspaceId || '',
+          uploadedBy: response.document.uploadedBy || '',
+          url: response.document.url || '#',
+          status: response.document.status || 'completed'
+        }
+        
+        documents.value.unshift(normalizedDocument)
         totalCount.value++
 
-        triggerToast(`${response.document.originalName} se ha subido correctamente`, 'success')
+        triggerToast(`${normalizedDocument.originalName || normalizedDocument.name} se ha subido correctamente`, 'success')
 
-        return response.document
+        return normalizedDocument
       } else {
         throw new Error(response.message)
       }
@@ -231,8 +245,21 @@ export const useDocumentStore = defineStore('document', () => {
       const response: GetDocumentsResponse = await documentService.getWorkspaceDocuments(params)
 
       if (response.success) {
-        documents.value = response.documents
-        totalCount.value = response.totalCount
+        // Normalizar documentos para compatibilidad con el frontend
+        documents.value = response.documents.map(doc => ({
+          ...doc,
+          _id: doc.id, // Mapear id a _id para compatibilidad
+          originalName: doc.originalName || doc.name, // Usar name como originalName si no existe
+          size: doc.size || 0,
+          mimeType: doc.mimeType || 'application/octet-stream',
+          updatedAt: doc.updatedAt || doc.uploadedAt,
+          workspaceId: doc.workspaceId || '',
+          uploadedBy: doc.uploadedBy || '',
+          url: doc.url || '#',
+          status: doc.status || 'completed'
+        }))
+        
+        totalCount.value = response.totalCount || response.documents.length
 
         if (response.pagination) {
           currentPage.value = response.pagination.page
@@ -348,13 +375,13 @@ export const useDocumentStore = defineStore('document', () => {
    */
   const downloadDocument = async (document: DocumentType): Promise<void> => {
     try {
-      const blob = await documentService.downloadDocument(document._id)
+      const blob = await documentService.downloadDocument(document._id!)
 
       // Crear URL temporal y descargar
       const url = window.URL.createObjectURL(blob)
       const link = window.document.createElement('a')
       link.href = url
-      link.download = document.originalName
+      link.download = document.originalName!
       window.document.body.appendChild(link)
       link.click()
 
